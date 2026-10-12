@@ -4,11 +4,11 @@ An automated workflow and agent skill for autonomous AI agents converting **acad
 
 ---
 
-## 🌟 Lessons Learned: The 8 Failure Modes & Preventive Measures
+## 🌟 Lessons Learned: The 9 Failure Modes & Preventive Measures
 
 Standard text extractors and naive single-prompt LLM calls fail on academic papers published in journals (*Elsevier*, *IEEE*, *Springer Nature*, *Taylor & Francis*, *Wiley*). Complex two-column layouts, open borderless tables, dense reference lists, and publisher cover sheets require systematic guards.
 
-This repository codifies the **8 core failure modes discovered in practice** and the **battle-tested preventive measures**:
+This repository codifies the **9 core failure modes discovered in practice** and the **battle-tested preventive measures**:
 
 | ❌ Failure Mode | 💡 Root Cause | ✅ Battle-Tested Preventive Measure |
 | :--- | :--- | :--- |
@@ -20,6 +20,7 @@ This repository codifies the **8 core failure modes discovered in practice** and
 | **6. Truncated Reference Bibliographies** | Dense reference sections contain ~1,400 words/page, exceeding token limits when combined. | Dedicated bibliography sub-batching (processing no more than ~40–60 references per call). |
 | **7. Publisher Cover-Sheet Folio Offset Drop** | Unnumbered cover sheets offset printed folios ($P_{\text{folio}} = P_{\text{pdf}} - 1$), causing image skips. | **Folio-Offset Prompt Invariant**: Directs the vision model to process all $N$ supplied images sequentially based on visual reality. |
 | **8. Rotated / Landscape Table Fragmentation** | Multi-parameter characterization tables are set in landscape orientation (rotated 90°). | **Rotational Coordinate Alignment**: Cognitive transformation parsing columns along rotated baselines without row fracturing. |
+| **9. Oversized Dense Body Chunks (4-Page Refusal Trap)** | Grouping $\ge 4$ dense pages with multiple complex tables into a single multimodal prompt triggers safety filters (*"I can't transcribe Pages 4-7 verbatim..."*). | **Bounded Sub-Batching ($\le 3$ Pages)**: Strict chunk limiter ensuring body batches never exceed 3 pages; partition 4-page tails into 2 + 2 pages with author-archival framing. |
 
 ---
 
@@ -109,6 +110,7 @@ The conversion architecture has been evaluated across four peer-reviewed papers 
 | **Research Article 1** (*Soy Protein*) | *J. Food Sci. Technol.* (Springer) | Primary Research | 15 pp. (6 batches) | 51 / 51 (100%) | 1 Main Table, 4 Figs + 7 ESM Tables | 57.5% | \$0.0146 USD (~₹1.27 INR) |
 | **Research Article 2** (*Sodium Alginate*) | *J. Macromol. Sci. B* (Taylor & Francis) | Primary Research | 28 pp. (10 batches) | 75 / 75 (100%) | 6 Tables, 5 Figs (Table 1 90° rotated) | 52.0% | \$0.0202 USD (~₹1.75 INR) |
 | **Research Article 3** (*DES Betanin*) | *Biomass Conv. Bioref.* (Springer Nature) | Primary Research | 13 pp. (6 batches) | 46 / 46 (100%) | 6 Tables, 4 Figs + Table S1, Figs S1–S4 | 63.4% | \$0.0212 USD (~₹1.84 INR) |
+| **Research Article 4** (*Chitosan/MgO/RFE*) | *Bioresour. Technol. Rep.* (Elsevier) | Primary Research | 9 pp. (4 batches) | 43 / 43 (Author-Year) | 8 Tables (3 main + 4 ESM) | 65.1% | \$0.0130 USD (~₹1.13 INR) |
 
 ---
 

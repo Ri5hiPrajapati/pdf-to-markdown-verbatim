@@ -178,7 +178,7 @@ During the high-effort thinking phase, prior to emitting output tokens, the mode
 
 ---
 
-## 4. The 8 Critical Failure Modes & Preventive Measures
+## 4. The 9 Critical Failure Modes & Preventive Measures
 
 | ❌ Failure Mode | 💡 Root Cause | ✅ Battle-Tested Preventive Measure |
 | :--- | :--- | :--- |
@@ -190,6 +190,7 @@ During the high-effort thinking phase, prior to emitting output tokens, the mode
 | **6. Truncated Reference Bibliographies** | Dense reference sections contain ~1,400 words/page, exceeding token limits when combined. | Dedicated bibliography sub-batching (processing no more than ~40–60 references per call). |
 | **7. Publisher Cover-Sheet Folio Offset Drop** | Journal downloads include an unnumbered cover sheet on physical Page 1, offsetting printed folios ($P_{\text{folio}} = P_{\text{pdf}} - 1$). The vision model misreads prompt page numbers as printed folios and skips Image 1. | **Image-Index Disambiguation Prompt**: Explicitly instruct the model to transcribe all $N$ supplied images sequentially and ignore folio-number offsets. |
 | **8. Rotated / Landscape Table Fragmentation** | Wide characterization tables are set in landscape orientation (rotated 90° counter-clockwise). | **Rotational Coordinate Transformation**: Vision OCR performs cognitive coordinate rotation, parsing columns along the rotated baseline without row splintering. |
+| **9. Oversized Dense Body Chunks (4-Page Refusal Trap)** | Grouping $\ge 4$ dense pages with multiple complex tables into a single multimodal prompt triggers safety filters (*"I can't transcribe Pages 4-7 verbatim..."*). | **Bounded Sub-Batching ($\le 3$ Pages)**: Strict chunk limiter ensuring body batches never exceed 3 pages; automatically partition 4-page tails into 2 + 2 pages with author-archival framing. |
 
 ---
 
@@ -368,6 +369,7 @@ The workflow, prompt constraints, and verification protocols codified in this sk
 | **Research Article 1** (*Soy Protein Biofilms*) | *J. Food Sci. Technol.* (Springer) | Primary Research | 15 pp. (6 batches) | 51 / 51 (100%) | 1 Main Table, 4 Figs + 7 ESM Tables | 57.5% | \$0.0146 USD (~₹1.27 INR) | Unnumbered Author-Year bibliography & ESM `.docx` integration |
 | **Research Article 2** (*Sodium Alginate Films*) | *J. Macromol. Sci. B* (Taylor & Francis) | Primary Research | 28 pp. (10 batches) | 75 / 75 (100%) | 6 Tables, 5 Figs (Table 1 90° rotated) | 52.0% | \$0.0202 USD (~₹1.75 INR) | Rotated landscape tables & cover-sheet folio offset invariance |
 | **Research Article 3** (*DES Betanin Extraction*) | *Biomass Conv. Bioref.* (Springer Nature) | Primary Research | 13 pp. (6 batches) | 46 / 46 (100%) | 6 Tables, 4 Figs + Table S1, Figs S1–S4 | 63.4% | **\$0.0212 USD (~₹1.84 INR)** | **Transition Page Boundary Invariant** & Message Batches API |
+| **Research Article 4** (*Chitosan/MgO/RFE Biofilms*) | *Bioresour. Technol. Rep.* (Elsevier) | Primary Research | 9 pp. (4 batches) | 43 / 43 (Author-Year) | 8 Tables (3 main + 4 ESM) | 65.1% | **\$0.0130 USD (~₹1.13 INR)** | **Bidirectional Recall Safeguard** & Bounded Sub-Batching |
 
 These case study benchmarks serve as regression verification suites for evaluating future models, automated visual OCR engines, and multimodal agent workflows.
 

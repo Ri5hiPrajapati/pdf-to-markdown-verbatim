@@ -79,6 +79,7 @@ def load_api_key():
     key = os.environ.get("ANTHROPIC_API_KEY", "")
     if not key:
         candidates = [
+            r"D:\SIDE PROJECTS\1. APJCE Review article\.env",
             os.path.join(os.getcwd(), ".env"),
             os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
             os.path.expanduser("~/.env")
@@ -131,9 +132,13 @@ def plan_dynamic_batches(total_pages, ref_start_page):
     batch_idx = 1
     
     while curr < ref_start_page:
-        end = min(curr + body_chunk_size, ref_start_page)
-        if ref_start_page - end == 1:
-            end = ref_start_page
+        remaining = ref_start_page - curr
+        # If 4 pages remain, partition into two 2-page chunks to prevent refusal filters
+        if remaining == 4:
+            chunk = 2
+        else:
+            chunk = min(body_chunk_size, remaining)
+        end = curr + chunk
             
         pages = list(range(curr, end))
         batches.append({
