@@ -1,9 +1,38 @@
+# Environment variables & secrets
+.env
+.env.*
+*.env
+
+# Python artifacts
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.pytest_cache/
+
+# Document formats & outputs
 *.pdf
 *.png
 *.jpg
 *.jpeg
+*.docx
+*.html
+*.jsonl
+
+# Output directories & traces
+*_markdown_output/
+*_output/
+output/
+part_*.md
+*thinking_trace.json
+*visual_reasoning_trace.md
+conversion_telemetry.json
+
+# Local sample data
+sample conversion data/
+samples/
+
+# OS artifacts
 .DS_Store
 Thumbs.db
+desktop.ini

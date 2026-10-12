@@ -9,7 +9,7 @@ A comprehensive, production-grade guide and agent skill template for autonomous 
 
 This skill explains **both the outer orchestration workflow and the inner cognitive reasoning engine**:
 * **Layer 1 (The Outer Pipeline):** Cross-platform PyMuPDF rasterization, dynamic segmentation, API payload structures, and post-conversion auditing.
-* **Layer 2 (The Inner Engine - The "HOW"):** The exact cognitive heuristics, visual projection algorithms, grid invariants, and glyph disambiguation logic utilized by multimodal vision models (`claude-haiku-5-5` with `effort: "high"` and adaptive thinking) to achieve publication-grade fidelity.
+* **Layer 2 (Prompted Cognitive Invariants & Layout Constraints):** The structured spatial heuristics, visual projection guidelines, grid invariants, and glyph disambiguation rules designed into the system prompt to steer multimodal vision models (`claude-haiku-5-5` with `effort: "high"` and adaptive thinking) toward publication-grade fidelity.
 
 ---
 
@@ -95,9 +95,9 @@ sequenceDiagram
 
 ---
 
-## 3. Layer 2: The Inner Cognitive Engine (The Exact "HOW")
+## 3. Layer 2: Prompted Cognitive Invariants & Visual Layout Guidelines
 
-This section documents the internal reasoning heuristics, spatial projection algorithms, and pre-emission verification checks that Claude Haiku 5.5 executes during high-effort adaptive thinking (`effort: "high"`):
+This section documents the prompt-steered spatial reasoning heuristics, visual layout conventions, and pre-emission verification checks designed to guide Claude Haiku 5.5 during high-effort adaptive thinking (`effort: "high"`):
 
 ```mermaid
 flowchart TD
@@ -178,7 +178,7 @@ During the high-effort thinking phase, prior to emitting output tokens, the mode
 
 ---
 
-## 4. The 6 Critical Failure Modes & Preventive Measures
+## 4. The 8 Critical Failure Modes & Preventive Measures
 
 | ❌ Failure Mode | 💡 Root Cause | ✅ Battle-Tested Preventive Measure |
 | :--- | :--- | :--- |
@@ -252,9 +252,9 @@ Autonomous agents must not treat LLM API calls as opaque black boxes. Multimodal
    $$\mathcal{R}_{cog} = \frac{\text{thinking\_tokens}}{\text{output\_tokens}}$$
    - **Table Density Sentinel**: Narrative prose pages average $\mathcal{R}_{cog} \approx 10\% - 25\%$. Complex multi-column data tables (e.g. Table 1) surge to $\mathcal{R}_{cog} \approx 50\% - 60\%$ (consuming 2,500+ reasoning tokens).
    - **Automated Complexity Profiling**: If an agent observes $\mathcal{R}_{cog} > 45\%$ on a page, it tags the section as high-density structured data.
-2. **Cryptographic Proof of Reasoning (`signature`)**:
-   - Each `thinking` block returned by Anthropic includes an HMAC cryptographic `signature` (e.g. `CAQS/S0KE...`).
-   - This cryptographic signature serves as verifiable proof that the internal spatial decomposition and grid verification steps were generated verbatim by the model's neural network and not fabricated post-hoc.
+2. **Anthropic Thinking Block Integrity (`signature`)**:
+   - Each `thinking` block returned by the Anthropic API includes an HMAC `signature` (e.g. `CAQS/S0KE...`).
+   - This signature is required by Anthropic's API to preserve thinking block integrity across multi-turn round-tripping. The conversion telemetry verifies that this signature is present.
 3. **Zero-Data-Loss Truncation Safeguard (`stop_reason`)**:
    - An agent must verify `stop_reason == "end_turn"` for every batch.
    - **Failure Alert**: If `stop_reason == "max_tokens"`, the model was cut off mid-emission. The orchestrator must automatically initiate a continuation sub-batch starting from the last printed line rather than silently accepting truncated Markdown.
@@ -344,27 +344,30 @@ Before marking any conversion task complete, the agent must verify:
 
 - [ ] **Computational Telemetry Audit**: `conversion_telemetry.json` records `all_batches_clean_stop: true` (`stop_reason == "end_turn"` across all batches).
 - [ ] **Refusal Sentinel**: Confirmed zero occurrences of safety refusal phrases in the output text.
-- [ ] **Cryptographic Signatures**: `has_cryptographic_signature: true` confirming authentic reasoning execution.
 - [ ] **Thinking Traces Archived**: Verified `{batch_id}_thinking_trace.json` files are saved for audit and skill distillation.
 - [ ] **Total Word Count**: Markdown word count is within expected variance of source text layer.
-- [ ] **6-Word Verbatim Alignment**: $\ge 85\%$ of 6-word n-grams match the source text verbatim.
-- [ ] **Table Integrity**: Every table mentioned in the text exists with complete rows, parameter columns, and units.
+- [ ] **Bidirectional 6-Word N-Gram Parity**:
+  - Precision: Markdown 6-word sequences exist in source text layer.
+  - Recall: Source 6-word sequences exist in Markdown output ($\ge 70\%$ threshold to prevent dropped content).
+- [ ] **Strict Numerical Multiset Audit**: Matched numerical values via multiset frequency distributions without substring false-positives.
+- [ ] **Table Grid Invariance**: Every Markdown table has consistent cell counts per row ($C_{\text{row}} = C_{\text{header}}$) with zero shifted cells.
 - [ ] **Figure Captions**: All figure captions are captured with placeholder tags `*[Image: Fig. N. Caption text [Ref].]*`.
-- [ ] **Reference Continuity**: Every reference from `[1]` to `[N]` is present without missing indices.
+- [ ] **Reference Sequence Continuity**: Every reference from `[1]` to `[N]` is present without sequence gaps.
 - [ ] **Special Characters**: All degree symbols (`°C`), micro units (`µm`), reaction arrows ($\rightarrow$), and Greek letters ($\alpha, \beta$) are rendered properly.
+- [ ] **Companion HTML Preview**: Compiled `<paper_name>.html` alongside Markdown for immediate rendering.
 
 ---
 
-## 8. Empirical Benchmark Datasets & Proven Production Ledger
+## 8. Empirical Multi-Paper Case Studies
 
-The cognitive architecture and prompts codified in this skill have been empirically verified across four diverse peer-reviewed publications with dual ground-truth parity:
+The workflow, prompt constraints, and verification protocols codified in this skill have been empirically evaluated across four diverse peer-reviewed publications as reference case studies:
 
-| Benchmark Paper | Venue & Publisher | Type | Pages & Batches | References Parity | Tables & Figures | $\mathcal{R}_{cog}$ (Peak) | Option A Cost (Haiku 5.5) | Key Architecture Invariant Validated |
+| Case Study Paper | Venue & Publisher | Type | Pages & Batches | References Parity | Tables & Figures | $\mathcal{R}_{cog}$ (Peak) | Option A Cost (Haiku 5.5) | Key Architecture Invariant Validated |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Review Article** (*Natural food colorants*) | *Mater. Today Proc.* (Elsevier) | Review | 15 pp. (5 batches) | 149 / 149 (100%) | 6 Tables (Table 1: 30 rows $\times$ 11 cols) | 52.4% | \$0.0218 USD (~₹1.89 INR) | Open borderless grid inference & massive table reconstruction |
 | **Research Article 1** (*Soy Protein Biofilms*) | *J. Food Sci. Technol.* (Springer) | Primary Research | 15 pp. (6 batches) | 51 / 51 (100%) | 1 Main Table, 4 Figs + 7 ESM Tables | 57.5% | \$0.0146 USD (~₹1.27 INR) | Unnumbered Author-Year bibliography & ESM `.docx` integration |
 | **Research Article 2** (*Sodium Alginate Films*) | *J. Macromol. Sci. B* (Taylor & Francis) | Primary Research | 28 pp. (10 batches) | 75 / 75 (100%) | 6 Tables, 5 Figs (Table 1 90° rotated) | 52.0% | \$0.0202 USD (~₹1.75 INR) | Rotated landscape tables & cover-sheet folio offset invariance |
 | **Research Article 3** (*DES Betanin Extraction*) | *Biomass Conv. Bioref.* (Springer Nature) | Primary Research | 13 pp. (6 batches) | 46 / 46 (100%) | 6 Tables, 4 Figs + Table S1, Figs S1–S4 | 63.4% | **\$0.0212 USD (~₹1.84 INR)** | **Transition Page Boundary Invariant** & Message Batches API |
 
-These benchmark ledgers serve as regression test suites for evaluating future models, automated visual OCR engines, and multimodal agent workflows.
+These case study benchmarks serve as regression verification suites for evaluating future models, automated visual OCR engines, and multimodal agent workflows.
 
