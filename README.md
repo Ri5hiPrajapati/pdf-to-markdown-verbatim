@@ -1,48 +1,60 @@
 # PDF to Verbatim Markdown (`pdf-to-markdown-verbatim`)
 
-An agent skill and systematic workflow for converting scientific research articles and technical PDFs into word-for-word, faithful Markdown (via digital text layer extraction or OCR), extracting tabular/numerical data, and mathematically verifying accuracy against the source.
+A production-grade agent skill and systematic workflow for converting scientific research articles and technical PDFs into word-for-word, faithful Markdown using **multimodal vision OCR (Claude Haiku 5.5 High Effort)**, reconstructing complex multi-column tables, equations, and dense bibliographies, and benchmarking against author Word drafts (`.docx`).
 
 ---
 
 ## 📌 Features
 
-- **Strict Verbatim Fidelity**: No paraphrasing, summarizing, or silent corrections.
-- **Two Sources of Truth**: 
-  - Text layer for prose and numerical metrics.
-  - Rendered page images for equations, complex symbols, and tables.
-- **Formula & Table Translation**:
-  - Formulas converted directly to LaTeX display (`$$...$$ \qquad (n)`) and inline (`$...$`) math.
-  - Tables converted to standardized Markdown format preserving units and columns.
-- **Automated & Visual Verification**:
-  - Automated diffing of word frequency, 6-word n-gram verbatim alignment, silent case/hyphen edits, and numerical preservation.
-  - Visual check guidance for formulas, figures, and abstract values.
-- **Auditable Conversion Notes**: A dedicated section to disclose every deliberate edit, repairs of defective glyphs, and dropped page furniture.
+- **Multimodal Visual OCR First**: Processes rendered high-resolution page images (150–200 DPI) to naturally resolve multi-column flows, spanning banners, and complex table geometries.
+- **Strict Verbatim Fidelity**: No paraphrasing, summarizing, or silent omissions. Preserves all original wording, notation, and typos.
+- **Dual Ground Truth Benchmarking**:
+  - **Final Published PDF**: The primary ground truth for final publication text and reference count.
+  - **Author Manuscript Draft (`.docx`)**: The structural benchmark (~99% content match) used to audit paragraph continuity and detect visual OCR ambiguities.
+- **Author-Context Prompt Framing**: Eliminates false-positive LLM copyright refusals by framing conversion within author manuscript digitization.
+- **Complete Table & Reference Preservation**:
+  - Reconstructs full Markdown tables with all columns, parameter units, and footnotes.
+  - Splits dense reference bibliographies into sub-batches to prevent token starvation.
+- **Cross-Platform & Pure-Python**: Uses `pymupdf` (`fitz`) and `python-docx`—runs seamlessly on Windows, Linux, and macOS without external system dependencies like Linux Poppler or Tesseract.
 
 ---
 
 ## 📂 Repository Contents
 
-- [`SKILL.md`](SKILL.md) - The complete agent skill definition for Antigravity / Claude / ChatGPT / Gemini.
-- [`verify_md.py`](verify_md.py) - Python script to quantitatively compare the Markdown conversion against the source PDF's text layer.
+- [`SKILL.md`](SKILL.md) - The complete, battle-tested agent skill definition for Antigravity, Claude, and Gemini assistants.
+- [`batch_converter_haiku55.py`](batch_converter_haiku55.py) - Automated sequential batch converter using Claude Haiku 5.5 with adaptive thinking and high effort.
+- [`verify_md.py`](verify_md.py) - Pure-Python cross-platform verification script for quantitative accuracy auditing.
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Verification Script Usage
-
-Requires `pdftotext` (from `poppler-utils`):
+### 1. Requirements
 
 ```bash
-python verify_md.py path/to/paper.pdf path/to/paper.md
+pip install pymupdf requests python-docx
+```
+
+### 2. Run Batch Conversion
+
+Set your Anthropic API key and run:
+
+```bash
+export ANTHROPIC_API_KEY="your-api-key"
+python batch_converter_haiku55.py path/to/paper.pdf path/to/benchmark.docx output_directory/
+```
+
+### 3. Verify Accuracy
+
+```bash
+python verify_md.py path/to/paper.pdf path/to/output.md
 ```
 
 The script evaluates:
-1. **Total word count comparison** (source vs. markdown).
-2. **Missing/Extra words** (identifies omitted phrases or hallucinations).
-3. **6-Word phrase verbatim match percentage**.
-4. **Case-only silent edits**.
-5. **Numerical accuracy** (flags any mismatched numbers in prose).
+1. **Total word count comparison** (source PDF text layer vs. Markdown).
+2. **6-Word phrase verbatim n-gram match percentage**.
+3. **Prose numbers and units matched**.
+4. **References audit** (checks every reference from `[1]` to `[N]` with missing number detection).
 
 ---
 
