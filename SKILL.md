@@ -118,6 +118,18 @@ Academic papers predominantly use "open" borderless tables (horizontal lines at 
 * **Degree & Metric Symbols**:
   - Distinguishes degree symbol ($^\circ$) from superscript zero ($^0$) or letter 'o' (`°C`, never `oC`).
   - Preserves micro symbols ($\mu\text{m}$, $\mu\text{g/g}$) rather than degrading to ASCII `um` or `ug`.
+* **Physical-Unit Tuples & Dimensionality Preservation**:
+  - The model parses physical quantities as structured tuples: `(value, uncertainty, unit, notation)`.
+  - **Upright Unit Invariant**: Units are wrapped in `\mathrm{}` (e.g. `$\mathrm{cm^{-1}}$`, `$T_{\mathrm{onset}}$`) so they never render as italicized algebraic variables.
+  - **Thin-Space Compound Separation**: Multi-dimensional transport units (e.g. Water Vapor Permeability) use thin spaces (`\,`) to prevent characters from collapsing: `$\mathrm{g\,m\,m^{-2}\,s^{-1}\,Pa^{-1}}$`.
+* **Tri-Partite Superscript Disambiguation (Table Data vs. Statistics)**:
+  - Scientific experimental data tables contain three visually similar superscript classes. The model disambiguates them by grammar and structural position:
+    1. **Mathematical Exponents**: Digits with base 10 or scientific notation ($10^{-10}$, $2.1 \times 10^{-6}$). Kept inside math mode.
+    2. **ANOVA / Tukey Significance Letters**: Trailing lowercase letters ($a, b, c$) appearing directly after a `value ± SD` pair with *no operator* ($0.0192 \pm 0.0004^a$, $1.46 \pm 0.09^b$). **Never folded into the numeric value**; rendered as cell metadata (`<sup>a</sup>` or `\textsuperscript{a}`).
+    3. **Footnote Keys**: Asterisks ($*$) or daggers ($\dagger$) in headers or label columns.
+* **DOI Line-Wrap Invariant in Author-Year Bibliographies**:
+  - DOIs (`10.\d{4,9}/\S+`) frequently wrap across column gutters and line breaks.
+  - **Literal Hyphen Rule**: Unlike prose where line-break hyphens are removed during de-hyphenation, a hyphen inside a DOI is a **literal, immutable character**. The model stitches broken DOI lines without stripping hyphens and without inserting spaces.
 * **Footnote Markers vs. Measured Data**:
   - Distinguishes superscript letters `(a)`, `(b)`, `(c)` attached to material sources (e.g. `Orange peel(d)`) from numbers that are measured data points.
   - Ensures footnote markers match the footnote definitions compiled beneath the table.
