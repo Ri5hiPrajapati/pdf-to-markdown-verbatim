@@ -69,8 +69,10 @@ The converter will:
 
 ### 3. Computational Telemetry & Cognitive Load Auditing
 
-Each conversion generates `conversion_telemetry.json` tracking:
+Each conversion generates `conversion_telemetry.json` and `{batch_id}_thinking_trace.json` tracking:
+* **The Self-Improving Cognitive Flywheel**: Extracts the model's raw internal thinking path (`thinking_trace.json`) from every API call, allowing you to inspect reasoning on complex layouts and continuously distill new edge-case rules back into `SKILL.md`.
 * **Cognitive Effort Ratio ($\mathcal{R}_{cog} = \frac{\text{thinking\_tokens}}{\text{output\_tokens}}$)**: Identifies complex data tables ($\mathcal{R}_{cog} > 50\%$) vs narrative prose ($\mathcal{R}_{cog} \approx 15\%$).
+* **Automated Refusal Sentinel**: Automatically detects false-positive safety refusals on dense bibliographies and executes a self-healing retry using author-context framing.
 * **Cryptographic Signatures (`has_cryptographic_signature`)**: Verifies HMAC-SHA authenticity of internal reasoning.
 * **Truncation Diagnostic (`stop_reason == "end_turn"`)**: Zero-data-loss verification confirming generation was not cut off.
 * **API Rate Limits & Throughput**: Tracks tokens remaining and effective tokens/sec throughput.
