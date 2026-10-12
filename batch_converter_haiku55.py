@@ -47,6 +47,15 @@ PRICING_BATCH_API = {
     "cache_read": 0.005
 }
 
+# Advisor Tool Supported Models (Anthropic Advisor Beta: advisor-tool-2026-03-01)
+ADVISOR_MODELS = {
+    "sonnet-5-5": "claude-sonnet-5-5",
+    "opus-5-5": "claude-opus-5-5",
+    "opus-5": "claude-opus-5",
+    "opus-4-8": "claude-opus-4-8",
+    "haiku-5-5": "claude-haiku-5-5"
+}
+
 
 def load_api_key():
     """Load Anthropic API key from environment or local .env files."""
@@ -157,8 +166,8 @@ def plan_dynamic_batches(total_pages, ref_start_page):
     return batches
 
 
-def build_batch_payload(b, doc, skill_text):
-    """Build the request payload for a single batch with prompt caching active."""
+def build_batch_payload(b, doc, skill_text, advisor_model=None, cache_ttl="5m"):
+    """Build the request payload for a single batch with active prompt caching and optional advisor tool."""
     content = []
     for pno in b["pages"]:
         page = doc[pno]
@@ -238,13 +247,16 @@ Strict Rules:
     # Active Prompt Caching: Inject SKILL.md into system prompt with ephemeral cache breakpoint
     system_payload = []
     if skill_text:
+        cache_block = {"type": "ephemeral"}
+        if cache_ttl and cache_ttl == "1h":
+            cache_block["ttl"] = "1h"
         system_payload.append({
             "type": "text",
             "text": skill_text,
-            "cache_control": {"type": "ephemeral"}
+            "cache_control": cache_block
         })
         
-    return {
+    payload = {
         "model": "claude-haiku-5-5",
         "max_tokens": 64000,
         "thinking": {"type": "adaptive"},
@@ -252,6 +264,19 @@ Strict Rules:
         "system": system_payload,
         "messages": [{"role": "user", "content": content}]
     }
+
+    # Hybrid Executor-Advisor Architecture: Add Advisor Tool if requested
+    if advisor_model:
+        payload["tools"] = [
+            {
+                "type": "advisor_20260301",
+                "name": "advisor",
+                "model": advisor_model,
+                "caching": {"type": "ephemeral", "ttl": cache_ttl if cache_ttl == "1h" else "5m"}
+            }
+        ]
+
+    return payload
 
 
 def process_response_payload(b, data, elapsed, output_dir):
@@ -392,8 +417,8 @@ def submit_and_poll_batch(batch_requests, headers, poll_interval=10):
     return batch_id, results_by_id
 
 
-def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_key=None, use_batch_api=False):
-    """Universal PDF-to-Markdown conversion engine supporting both Real-Time and Message Batches modes."""
+def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_key=None, use_batch_api=False, advisor_model=None, cache_ttl=None):
+    """Universal PDF-to-Markdown conversion engine supporting both Real-Time and Message Batches modes, with prompt caching and advisor tool."""
     if not api_key:
         api_key = load_api_key()
     if not api_key:
@@ -402,6 +427,15 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
     if not output_dir:
         output_dir = os.path.splitext(pdf_path)[0] + "_markdown_output"
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Configure cache TTL (Anthropic recommends 1h for batches)
+    if cache_ttl is None:
+        cache_ttl = "1h" if use_batch_api else "5m"
+
+    # Resolve Advisor Model if specified
+    advisor_model_id = None
+    if advisor_model:
+        advisor_model_id = ADVISOR_MODELS.get(advisor_model.lower(), advisor_model)
     
     doc = fitz.open(pdf_path)
     total_pages = len(doc)
@@ -418,9 +452,13 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
     print(f"Total Pages:          {total_pages}")
     print(f"References Start:     Page {ref_start + 1}")
     if skill_text:
-        print(f"Active Prompt Cache:  ENABLED ({len(skill_text):,} chars / ~11,172 tokens of SKILL.md)")
+        print(f"Active Prompt Cache:  ENABLED ({len(skill_text):,} chars / ~11,172 tokens of SKILL.md | TTL: {cache_ttl})")
     else:
         print(f"Active Prompt Cache:  DISABLED (SKILL.md not found)")
+    if advisor_model_id:
+        print(f"Hybrid Advisor Tool:  ENABLED (Advisor Model: {advisor_model_id})")
+    else:
+        print(f"Hybrid Advisor Tool:  DISABLED")
     print(f"Output Directory:     {output_dir}")
     print(f"============================================================\n")
     
@@ -434,6 +472,8 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
         "anthropic-version": "2023-06-01",
         "content-type": "application/json"
     }
+    if advisor_model_id:
+        headers["anthropic-beta"] = "advisor-tool-2026-03-01"
     
     converted_parts = []
     batch_telemetry = []
@@ -445,7 +485,7 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
     if use_batch_api:
         batch_requests = []
         for b in batches:
-            payload = build_batch_payload(b, doc, skill_text)
+            payload = build_batch_payload(b, doc, skill_text, advisor_model=advisor_model_id, cache_ttl=cache_ttl)
             batch_requests.append({
                 "custom_id": b["id"],
                 "params": payload
@@ -480,7 +520,7 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
             print(f"\n==========================================")
             print(f"Processing Batch {idx+1}/{len(batches)}: {b['desc']}")
             
-            payload = build_batch_payload(b, doc, skill_text)
+            payload = build_batch_payload(b, doc, skill_text, advisor_model=advisor_model_id, cache_ttl=cache_ttl)
             print("  Sending visual OCR request to Claude Haiku 5.5 High Effort...")
             start_time = time.time()
             
@@ -679,6 +719,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("pdf", help="Path to input academic PDF file")
     parser.add_argument("--batch", action="store_true", help="Enable Option A: Anthropic Message Batches API for 50%% discount on all token costs")
+    parser.add_argument("--advisor", choices=list(ADVISOR_MODELS.keys()) + list(ADVISOR_MODELS.values()), default=None,
+                        help="Enable Anthropic Advisor Tool (e.g. sonnet-5-5, opus-5-5) for difficult pages/tables")
+    parser.add_argument("--cache-ttl", choices=["5m", "1h"], default=None,
+                        help="Prompt cache duration: '5m' (standard) or '1h' (recommended for batches)")
     parser.add_argument("--out", default=None, help="Custom output directory")
     parser.add_argument("--docx", default=None, help="Optional author draft benchmark (.docx) for parity audit")
     
@@ -687,5 +731,7 @@ if __name__ == "__main__":
         pdf_path=args.pdf,
         output_dir=args.out,
         docx_benchmark=args.docx,
-        use_batch_api=args.batch
+        use_batch_api=args.batch,
+        advisor_model=args.advisor,
+        cache_ttl=args.cache_ttl
     )

@@ -61,6 +61,38 @@ sequenceDiagram
     end
 ```
 
+### Architectural Pattern: The Hybrid Executor-Advisor Cognitive Architecture (`advisor_20260301`)
+
+For challenging academic PDFs containing extreme structural anomalies (e.g. 90° rotated multi-column tables, multi-layer chemical reaction mechanisms, or dense spectral deconvolution plots), the conversion pipeline supports Anthropic's native **Advisor Tool** (`type: "advisor_20260301"`):
+
+```mermaid
+sequenceDiagram
+    participant Orch as Batch Orchestrator
+    participant Exec as Executor: Claude Haiku 5.5 ($0.05/$0.25 Mtok)
+    participant Adv as Advisor: Claude Sonnet 5.5 / Opus 5.5 ($1.00/$5.00 Mtok)
+
+    Orch->>Exec: Multimodal Page Batch + Advisor Tool Definition
+    Note over Exec: Haiku transcribes standard text, headers & equations
+    Exec->>Adv: server_tool_use: advisor (at complex table/anomaly)
+    Note over Adv: Inspects full transcript & visual layout server-side
+    Adv-->>Exec: advisor_tool_result (strategic structural plan)
+    Note over Exec: Resumes generation guided by advisor plan
+    Exec-->>Orch: Verbatim Markdown Output
+```
+
+- **Beta Header**: `anthropic-beta: advisor-tool-2026-03-01`
+- **Tool Specification**:
+  ```json
+  {
+    "type": "advisor_20260301",
+    "name": "advisor",
+    "model": "claude-sonnet-5-5",
+    "caching": {"type": "ephemeral", "ttl": "1h"}
+  }
+  ```
+- **Cost & Intelligence Symmetry**: The executor (`claude-haiku-5-5`) performs 95%+ of mechanical token generation at budget rates ($0.05/Mtok in batches), while consulting the frontier advisor (`claude-sonnet-5-5` or `claude-opus-5-5`) server-side exclusively on difficult turns. This yields frontier-tier spatial layout accuracy without incurring frontier-tier costs across the entire manuscript.
+- **Batch Processing Compatibility**: Fully supported within the Message Batches API (`usage.iterations` reported per item).
+
 ---
 
 ## 3. Layer 2: The Inner Cognitive Engine (The Exact "HOW")
@@ -226,18 +258,24 @@ Autonomous agents must not treat LLM API calls as opaque black boxes. Multimodal
 3. **Zero-Data-Loss Truncation Safeguard (`stop_reason`)**:
    - An agent must verify `stop_reason == "end_turn"` for every batch.
    - **Failure Alert**: If `stop_reason == "max_tokens"`, the model was cut off mid-emission. The orchestrator must automatically initiate a continuation sub-batch starting from the last printed line rather than silently accepting truncated Markdown.
-4. **Prompt Caching Economics & Option A Message Batches API**:
+4. **Prompt Caching Economics & Option A Message Batches API Synergy**:
    - **Official Claude Haiku 5.5 Rates** (Anthropic Platform, Released Oct 7, 2026, prompts $\le 100\text{K}$):
      - Base Input: **$0.10** / 1M tokens ($0.00010 / K)
      - Base Output: **$0.50** / 1M tokens ($0.00050 / K)
-     - Cache Creation: **$0.125** / 1M tokens
+     - Cache Creation: **$0.125** / 1M tokens (5m TTL) / **$0.20** / 1M tokens (1h TTL)
      - Cache Read: **$0.01** / 1M tokens (90% input discount)
-   - **Option A: Anthropic Message Batches API (`POST /v1/messages/batches`)**:
-     - All batch requests receive an automatic **50% flat discount on both input and output tokens**:
-       - Batch Base Input: **$0.05** / 1M tokens
-       - Batch Base Output: **$0.25** / 1M tokens
-       - Batch Cache Read: **$0.005** / 1M tokens (95% discount vs real-time)
+   - **512-Token Minimum Cacheable Prompt Threshold**:
+     - Claude Haiku 5.5 has a **512-token minimum cacheable prompt length** (the lowest threshold across all Claude models; compared to 1,024 on Sonnet and 2,048 on older models). Our ~5,000 token `SKILL.md` system prompt comfortably exceeds this minimum on every single batch.
+   - **1-Hour Cache Duration (`ttl: "1h"`) Best Practice for Batches**:
+     - *Anthropic Official Guidance*: Because asynchronous batch queues can exceed 5 minutes under platform load, specifying `cache_control: {"type": "ephemeral", "ttl": "1h"}` guarantees that cache entries do not expire prematurely, maximizing cache hit ratios across all batch items.
+   - **Multiplicative Discount Stacking Formula**:
+     - In the Message Batches API, the **50% batch discount stacks multiplicatively with the 90% cache read discount**:
+       $$\text{Batch Cache Read Rate} = \$0.10 \times 0.50 \times 0.10 = \mathbf{\$0.005\text{ / Mtok}}$$
+     - Output tokens are simultaneously discounted 50% ($0.25 / Mtok).
      - **Real-World Impact**: An entire 13–28 page primary research paper converts for **~₹1.50 to ₹2.00 INR total ($0.018–$0.025 USD)**, averaging **~8 to 14 paise per page**.
+   - **Automatic vs. Explicit Cache Breakpoints**:
+     - *Explicit Breakpoints*: Place `cache_control: {"type": "ephemeral", "ttl": "1h"}` directly on system instructions (`SKILL.md`) for deterministic prefix caching across independent batches.
+     - *Automatic Caching*: Add top-level `cache_control: {"type": "ephemeral"}` to automatically slide cache breakpoints forward as conversational contexts grow.
 5. **Infrastructure & Rate-Limit Tracking (HTTP Headers)**:
    - Captures `request-id` (e.g. `req_01...` or `msg_01...`) for distributed tracing.
    - Monitors `anthropic-ratelimit-tokens-remaining` and `anthropic-ratelimit-tokens-reset` to dynamically calibrate parallel batch concurrency without hitting HTTP 429 throttling.

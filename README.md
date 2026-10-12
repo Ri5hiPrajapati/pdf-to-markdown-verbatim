@@ -54,16 +54,25 @@ export ANTHROPIC_API_KEY="your-api-key"
 Run the universal converter:
 
 ```bash
-python batch_converter_haiku55.py path/to/paper.pdf [output_dir] [optional_benchmark.docx]
+# 1. Standard Synchronous Real-Time Mode:
+python batch_converter_haiku55.py path/to/paper.pdf
+
+# 2. Option A: Asynchronous Message Batches API (50% Flat Discount + Active 1h Prompt Caching):
+python batch_converter_haiku55.py path/to/paper.pdf --batch
+
+# 3. Hybrid Executor-Advisor Mode (Claude Haiku 5.5 + Sonnet 5.5 / Opus 5.5 Advisor on difficult pages):
+python batch_converter_haiku55.py path/to/paper.pdf --batch --advisor sonnet-5-5
 ```
 
 The converter will:
 1. Scan the PDF and detect the reference section starting page.
 2. Plan dynamic 3-page body batches and 2-page reference sub-batches.
 3. Render pages at 150 DPI and call `claude-haiku-5-5` with `effort: "high"` and adaptive thinking.
-4. Reconstruct all data tables and mathematical/chemical notations ($...$, $$...$$).
-5. Stitch all chunks into `output_dir/<paper_name>.md`.
-6. Log a companion **`output_dir/conversion_telemetry.json`** auditing thinking token ratios, cryptographic signatures, rate limits, and throughput.
+4. Active Prompt Caching: Inject `SKILL.md` rules into cached system prompts (512-token minimum threshold met; 90–95% input discount).
+5. Hybrid Advisor Tool (optional): Enable `advisor_20260301` server-side guidance on complex rotated tables or ambiguous schemes.
+6. Reconstruct all data tables and mathematical/chemical notations ($...$, $$...$$).
+7. Stitch all chunks into `output_dir/<paper_name>.md` and compile a companion `output_dir/<paper_name>.html` for one-click browser viewing.
+8. Log a companion **`output_dir/conversion_telemetry.json`** auditing thinking token ratios, cryptographic signatures, rate limits, and throughput.
 
 ---
 
