@@ -156,6 +156,8 @@ During the high-effort thinking phase, prior to emitting output tokens, the mode
 | **4. Table Truncation Across Page Breaks** | Wide, multi-page data tables lose columns or get abbreviated with ellipsis (`...`). | Strict prompt rules instructing the model to reconstruct full Markdown tables (`\| ... \|`), preserving every row, unit, and footnote. |
 | **5. Corrupted Glyphs & OS Encoding Crashes** | PDF fonts remap degree symbols (`\x03C`), micro ($\mu\text{m}$), and arrows. Scripts crash on Windows `cp1252`. | Pure-Python cross-platform architecture with PyMuPDF, UTF-8 stdout reconfigured, and visual glyph reading. |
 | **6. Truncated Reference Bibliographies** | Dense reference sections contain ~1,400 words/page, exceeding token limits when combined. | Dedicated bibliography sub-batching (processing no more than ~40–60 references per call). |
+| **7. Publisher Cover-Sheet Folio Offset Drop** | Journal downloads include an unnumbered cover sheet on physical Page 1, offsetting printed folios ($P_{\text{folio}} = P_{\text{pdf}} - 1$). The vision model misreads prompt page numbers as printed folios and skips Image 1. | **Image-Index Disambiguation Prompt**: Explicitly instruct the model to transcribe all $N$ supplied images sequentially and ignore folio-number offsets. |
+| **8. Rotated / Landscape Table Fragmentation** | Wide characterization tables are set in landscape orientation (rotated 90° counter-clockwise). | **Rotational Coordinate Transformation**: Vision OCR performs cognitive coordinate rotation, parsing columns along the rotated baseline without row splintering. |
 
 ---
 
@@ -196,6 +198,12 @@ When converting papers where the author provides pre-publication Word manuscript
      - $P$-values and degrees of freedom: italic $P$ (`$P < 0.05$`, `$p < 0.01$`).
      - Standard deviations ($\pm\text{SD}$) preserved with consistent decimal precision matching the mean.
      - Significance letterings (Tukey/Duncan ANOVA superscripts: $a, b, c, ab$) attached to means as `<sup>a</sup>` or `\textsuperscript{a}`.
+10. **The Publisher Cover-Sheet Folio Offset Invariant**:
+    - When batching papers with unnumbered publisher cover sheets (e.g., Taylor & Francis, Springer, Elsevier), physical PDF page $P$ maps to printed journal folio $P - 1$.
+    - **Image-Indexing Protocol**: Prompts must explicitly instruct the vision model to process all $N$ sequentially supplied images and ignore disparities between physical PDF batch numbers and printed folio headers.
+11. **Rotated & Landscape Table Transformation Invariant**:
+    - Multi-parameter characterization matrices (e.g., Table 1 with 9 columns spanning mechanical, optical, barrier, and antioxidant data) frequently appear rotated 90° counter-clockwise.
+    - The vision model dynamically performs rotational coordinate transformation, aligning tabular headers, units, values, and ANOVA superscripts into standard Markdown pipe syntax without row fracturing.
 
 ---
 
