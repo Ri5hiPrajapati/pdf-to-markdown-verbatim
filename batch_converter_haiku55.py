@@ -128,18 +128,27 @@ def plan_dynamic_batches(total_pages, ref_start_page):
         batch_idx += 1
         
     # 2. Reference pages (from ref_start_page to total_pages)
-    ref_chunk_size = 2  # 2 pages per batch prevents token starvation on dense bibliographies
     curr_ref = ref_start_page
     ref_part_idx = 1
     while curr_ref < total_pages:
+        # If total reference pages is 2 or fewer, allocate 1 page per batch for maximum attention
+        if total_pages - ref_start_page <= 2:
+            ref_chunk_size = 1
+        else:
+            ref_chunk_size = 2
+            
         end_ref = min(curr_ref + ref_chunk_size, total_pages)
         pages = list(range(curr_ref, end_ref))
+        is_transition = (curr_ref == ref_start_page)
+        b_type = "transition" if is_transition else "references"
+        b_desc = f"Transition (Conclusion/Declarations + Refs Part {ref_part_idx})" if is_transition else f"References Part {ref_part_idx} Pages {curr_ref+1} to {end_ref}"
+        
         batches.append({
             "id": f"batch_{batch_idx}_refs_part_{ref_part_idx}",
-            "type": "references",
+            "type": b_type,
             "pages": pages,
             "filename": f"part_{batch_idx}_refs_{ref_part_idx}_pages_{curr_ref+1}_to_{end_ref}.md",
-            "desc": f"References Pages {curr_ref+1} to {end_ref}"
+            "desc": b_desc
         })
         curr_ref = end_ref
         ref_part_idx += 1
@@ -186,6 +195,27 @@ Strict Rules for Markdown:
 5. Mathematical & Chemical Notation: Use LaTeX notation ($...$ for inline, $$...$$ for display).
 6. Page Furniture: Exclude running headers, journal logos, and page numbers.
 7. Return clean Markdown after </reasoning_trace>."""
+    elif b["type"] == "transition":
+        prompt = f"""You are an OCR and document layout transcription engine assisting the author in digitizing their scientific paper into structured Markdown format.
+The author holds full rights to their academic work and requires high-fidelity Markdown digitization of Pages {page_numbers_str}.
+Notice: These pages contain BOTH the concluding sections of the manuscript (Conclusions, Supplementary Information, Acknowledgements, Author Contributions, Declarations, Conflict of Interest) AND the beginning of the References bibliography.
+
+Task:
+1. First, transcribe all concluding body sections, paragraphs, headings, and statements appearing before the References heading completely and verbatim.
+2. Next, transcribe every single reference entry under the References section completely and verbatim into structured Markdown list format.
+
+CRITICAL INSTRUCTION - VISUAL REASONING TRACE:
+Before emitting the Markdown transcription, you MUST begin with an explicit visual reasoning trace enclosed in `<reasoning_trace>...</reasoning_trace>` detailing:
+1. Visual Scene Decomposition: Boundary between concluding body sections and the References heading.
+2. Section Headings & Metadata: Capture Acknowledgements, Author Contributions, Funding, Declarations, and Ethics statements.
+3. Reference Entries: Entry numbers detected, DOI line-wraps, and reference count verification.
+4. Pre-Emission Verification: Spot-checks on names, years, DOIs, and verbatim parity.
+
+Strict Rules:
+1. Verbatim fidelity: Transcribe all sections and every reference entry completely without skipping, omitting, or using ellipsis.
+2. Format: Format references cleanly: `[N] Authors, Article Title, Journal Volume (Year) Pages, DOI.`
+3. Page Furniture: Exclude running headers, journal logos, and page numbers.
+4. Return clean Markdown after </reasoning_trace>."""
     else:
         prompt = f"""You are an OCR and reference bibliography formatting assistant for the author.
 The author holds full rights to their academic work and requires the reference list from Pages {page_numbers_str} converted into clean Markdown for personal publication records.
@@ -503,6 +533,40 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
     refs = sorted(set(int(r) for r in re.findall(r"\[(\d+)\]", master_text) if int(r) <= 500))
     if refs:
         print(f"  References Audited: [1] to [{max(refs)}] (Total unique: {len(refs)})")
+        
+    # Generate companion HTML preview
+    try:
+        import markdown
+        html_path = os.path.splitext(master_path)[0] + ".html"
+        html_body = markdown.markdown(master_text, extensions=["tables", "fenced_code"])
+        full_html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{base_name}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 980px; margin: 40px auto; padding: 0 24px; color: #24292f; background-color: #ffffff; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 24px 0; font-size: 13.5px; overflow-x: auto; display: block; }}
+  th, td {{ border: 1px solid #d0d7de; padding: 8px 12px; text-align: left; }}
+  th {{ background-color: #f6f8fa; font-weight: 600; }}
+  tr:nth-child(even) {{ background-color: #fbfcfd; }}
+  h1, h2, h3, h4 {{ border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; margin-top: 28px; margin-bottom: 16px; color: #1f2328; }}
+  p {{ margin-bottom: 16px; text-align: justify; }}
+  code {{ background: #eff1f3; padding: 2px 6px; border-radius: 4px; font-size: 90%; }}
+  blockquote {{ border-left: 4px solid #0969da; margin: 16px 0; padding: 0 16px; color: #57606a; }}
+  hr {{ height: 2px; background-color: #d0d7de; border: none; margin: 32px 0; }}
+</style>
+</head>
+<body>
+{html_body}
+</body>
+</html>"""
+        with open(html_path, "w", encoding="utf-8") as hfp:
+            hfp.write(full_html)
+        print(f"✓ Companion HTML Generated: {html_path}")
+    except Exception as e:
+        print(f"  Notice: HTML preview generation skipped: {e}")
         
     # Write Comprehensive Telemetry Audit Report
     total_elapsed = time.time() - total_start_time
