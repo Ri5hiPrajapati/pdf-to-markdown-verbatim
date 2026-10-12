@@ -179,6 +179,23 @@ When converting papers where the author provides pre-publication Word manuscript
 5. **Cognitive Load Profiling: Review Papers vs. Primary Research Papers**:
    - **Review Papers**: Cognitive effort ($\mathcal{R}_{cog}$) peaks on massive comparative literature tables spanning multiple columns and pages (e.g., Table 1 with 30 rows $\times$ 11 columns, $\mathcal{R}_{cog} \approx 56\%$).
    - **Primary Research Papers**: Cognitive effort peaks on dense empirical formulations, spectral deconvolution wavenumbers (FTIR amide bands $\text{cm}^{-1}$), thermal degradation stages (TGA $T_{\text{onset}}$), and multi-parameter transport equations (WVP in $\mathrm{g\,m\,m^{-2}\,s^{-1}\,Pa^{-1}}$). In our JFST benchmark, Batch 3 reached $\mathcal{R}_{cog} = 57.5\%$.
+6. **Grounded Visual Authority vs. Prompt Priors (Anti-Hallucination Sentinel)**:
+   - External prompts and orchestrator briefs often convey unverified prior assumptions (e.g., assuming a table contains 30 rows or contains $\alpha$-tocopherol, or that a table is located on Page 4).
+   - **Testable Hypotheses Rule**: The visual engine treats prompt assertions strictly as hypotheses to verify, never as authoritative ground truth.
+   - **Pixel Primacy**: When the physical pixel raster contradicts the prompt (e.g., Table 1 actually contains 28 rows, $\alpha$-tocopherol is absent, or Table 1 floats to Page 7), the model strictly transcribes the grounded visual reality of the published proof and logs divergences in its reasoning trace rather than fabricating data to satisfy prompt expectations.
+   - **Publisher Typo Invariant**: Verbatim transcription preserves original publisher typos (e.g., `seeweeds`, `organe`, `bioavaibility`, `algue` in the published text); the model transcribes printed reality without unsolicited spell-correction.
+7. **Publisher Typesetting Layout Drift & Floating Element Discovery**:
+   - In primary experimental research papers, tables and multi-panel figures routinely "float" forward or backward across section and page boundaries relative to author manuscript drafts (`.docx`).
+   - For example, author drafts typically place Table 1 immediately following formulation text (Page 4 equivalent), but published proofs float Table 1 across the Methods/Results boundary to the top of Page 7.
+   - Dynamic batching and visual OCR decouple parsing from rigid manuscript page expectations, allowing spatial scene decomposition to discover and anchor floating elements at their true visual coordinates.
+8. **Anchor Negative-Assertion Protocol**:
+   - When transcribing complex experimental characterization sections (e.g., FTIR spectra, AFM topographies, FESEM micrographs, TGA thermograms), prompts may query specific numerical anchors ($R_a/R_q$ surface roughness in $\text{nm}$, TGA degradation stages, Amide-I secondary structure deconvolution).
+   - If graphical plots display only qualitative curves or panels without explicit inline numerical labels on those specific pages, the model maintains a strict **negative-assertion protocol**: explicitly logging their physical absence rather than hallucinating plausible synthetic values.
+9. **Statistical Notation Invariants in Primary Research**:
+   - Experimental papers feature rigorous inferential statistics that must be distinguished from ordinary prose:
+     - $P$-values and degrees of freedom: italic $P$ (`$P < 0.05$`, `$p < 0.01$`).
+     - Standard deviations ($\pm\text{SD}$) preserved with consistent decimal precision matching the mean.
+     - Significance letterings (Tukey/Duncan ANOVA superscripts: $a, b, c, ab$) attached to means as `<sup>a</sup>` or `\textsuperscript{a}`.
 
 ---
 
