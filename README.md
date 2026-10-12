@@ -25,7 +25,7 @@ This repository codifies the **exact failure modes discovered in practice** and 
 
 * [`SKILL.md`](SKILL.md) — The complete universal Agent Skill specification. Plug this directly into **Google Antigravity**, **Claude Code**, **Gemini CLI**, or any agentic system.
 * [`batch_converter_haiku55.py`](batch_converter_haiku55.py) — Universal, dynamic Python batch converter that scans any arbitrary PDF, calculates page counts, identifies reference sections, executes high-effort visual OCR passes, stitches the master Markdown file, and generates a comprehensive computational audit report (`conversion_telemetry.json`).
-* [`verify_md.py`](verify_md.py) — Pure-Python, cross-platform quantitative verification tool (evaluates word counts, 6-word n-gram verbatim alignment, number preservation, and reference completeness).
+* [`verify_md.py`](verify_md.py) — Pure-Python, cross-platform quantitative verification tool (evaluates word counts, 6-word n-gram verbatim alignment, number preservation, and both numbered [N] and unnumbered Author-Year bibliographies).
 
 ---
 

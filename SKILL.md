@@ -147,16 +147,26 @@ During the high-effort thinking phase, prior to emitting output tokens, the mode
 
 ---
 
-## 5. Dual Ground-Truth Benchmarking Protocol
+## 5. Dual Ground-Truth Benchmarking & Electronic Supplementary Material (ESM) Protocol
 
-If the author provides a pre-publication Word manuscript (`.docx`):
+### Dual-Source Verification Strategy
+When converting papers where the author provides pre-publication Word manuscripts (`.docx`) and Supplementary Data files:
 
-1. **Use PDF as Final Authority**: The published PDF represents the final edited version with proof corrections, final layout, and any additional references added during peer review.
-2. **Use Word DOCX as Structural Benchmark**: The author draft (typically ~99% identical in body prose) serves as a baseline to verify:
+1. **Use PDF as Supreme Authority**: The published journal PDF represents the final edited version with copyediting, proof corrections, final layout, and peer-review reference additions (e.g., 41 draft references expanded to 51 in final JFST publication).
+2. **Use Word DOCX as Structural Benchmark**: The author draft serves as a baseline to verify:
    - Paragraph continuity (confirming no paragraphs were dropped).
    - Numerical values in tables.
    - Spelling of technical terms and author names.
-3. **Reference Mapping**: Author drafts often have fewer references than the published paper (e.g. 137 in draft vs 149 in final published PDF). Map draft references to confirm baseline integrity and verify that final additions match the published proof.
+3. **Handling Diverse Reference Styles (Numbered vs. Author-Year)**:
+   - **Numbered Bibliographies** (e.g. *Elsevier*, *IEEE*): Citations appear as `[N]` and list items as `[1]`, `[2]`, ... `[N]`.
+   - **Author-Year Bibliographies** (e.g. *Springer*, *Nature*, *APA*): Citations appear in-text as `(Author et al. Year)` and bibliography entries are unnumbered and ordered alphabetically (`Agustinelli SP et al (2021)...`).
+   - **Entry Boundary Invariant**: When transcribing unnumbered bibliographies, the model detects entry boundaries using initial capitalized author surnames followed by publication years in parentheses `(YYYY)`, ensuring zero merged or dropped references.
+4. **Electronic Supplementary Material (ESM / Appendices) Ingestion**:
+   - Primary research papers frequently rely on supplementary data files (`.docx` / `.pdf`) containing additional characterization tables (`Table S1` through `Table S7`) and spectrum figures (`Fig. S1`, `Fig. S2`).
+   - **Ingestion Pattern**: Extract supplementary tables directly into standard Markdown tables and append them under an **`# Electronic Supplementary Material (ESM)`** section at the bottom of the master `.md`. This produces a single, self-contained, machine-readable scientific document.
+5. **Cognitive Load Profiling: Review Papers vs. Primary Research Papers**:
+   - **Review Papers**: Cognitive effort ($\mathcal{R}_{cog}$) peaks on massive comparative literature tables spanning multiple columns and pages (e.g., Table 1 with 30 rows $\times$ 11 columns, $\mathcal{R}_{cog} \approx 56\%$).
+   - **Primary Research Papers**: Cognitive effort peaks on dense empirical formulations, spectral deconvolution wavenumbers (FTIR amide bands $\text{cm}^{-1}$), thermal degradation stages (TGA $T_{\text{onset}}$), and multi-parameter transport equations (WVP in $\mathrm{g\,m\,m^{-2}\,s^{-1}\,Pa^{-1}}$). In our JFST benchmark, Batch 3 reached $\mathcal{R}_{cog} = 57.5\%$.
 
 ---
 

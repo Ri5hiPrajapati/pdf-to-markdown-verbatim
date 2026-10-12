@@ -67,10 +67,22 @@ def main(pdf_path, md_path):
     diff_nums = nums_src - nums_md
     print(f"Prose numbers matched: {len(nums_src) - len(diff_nums)}/{len(nums_src)}")
     
-    # Check references
-    refs_found = sorted(set(int(r) for r in re.findall(r"\[(\d+)\]", out) if int(r) <= 300))
+    # Check references (Numbered style or Author-Year style)
+    refs_found = sorted(set(int(r) for r in re.findall(r"\[(\d+)\]", out) if int(r) <= 500))
     if refs_found:
-        print(f"References detected: [1] to [{max(refs_found)}] (Total unique cited/listed: {len(refs_found)})")
+        print(f"Numbered References detected: [1] to [{max(refs_found)}] (Total unique cited/listed: {len(refs_found)})")
+    else:
+        # Check Author-Year style references (e.g. Springer, Nature, APA)
+        m = re.search(r"(?:^|\n)#{1,3}\s*References?\b", out, re.I)
+        if m:
+            ref_part = out[m.start():]
+            # Strip ESM / Supplementary material if appended afterwards
+            m_esm = re.search(r"(?:^|\n)#{1,3}\s*(?:Electronic\s+)?Supplementary", ref_part, re.I)
+            if m_esm:
+                ref_part = ref_part[:m_esm.start()]
+            author_year_refs = re.findall(r"\(([12]\d{3})\)", ref_part)
+            if author_year_refs:
+                print(f"Author-Year References detected: {len(author_year_refs)} entries cited/listed in bibliography")
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
