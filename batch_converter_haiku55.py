@@ -38,6 +38,20 @@ def load_api_key():
                 break
     return key
 
+def load_skill_instructions():
+    """Load SKILL.md heuristics to inject as cached system prompt."""
+    candidates = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "SKILL.md"),
+        r"D:\SIDE PROJECTS\pdf-to-markdown-verbatim\SKILL.md",
+        r"d:\SIDE PROJECTS\1. APJCE Review article\literature\Section_4_Microfluidics_and_Continuous_Nanocomposites\manually downloaded2\skills\SKILL.md",
+        os.path.join(os.getcwd(), "SKILL.md")
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            with open(c, "r", encoding="utf-8") as f:
+                return f.read().strip()
+    return ""
+
 def find_references_start_page(doc):
     """Dynamically scan for the page where the reference section begins."""
     total = len(doc)
@@ -114,10 +128,15 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
     total_pages = len(doc)
     ref_start = find_references_start_page(doc)
     
+    skill_text = load_skill_instructions()
     print(f"=== UNIVERSAL ACADEMIC PDF CONVERTER ===")
     print(f"Source PDF: {pdf_path}")
     print(f"Total Pages: {total_pages}")
     print(f"Reference Section Detected at Page: {ref_start + 1}")
+    if skill_text:
+        print(f"Active Heuristics Loaded: {len(skill_text):,} chars from SKILL.md (Prompt Caching enabled)")
+    else:
+        print(f"Notice: No external SKILL.md loaded (using default prompts)")
     
     batches = plan_dynamic_batches(total_pages, ref_start)
     print(f"Generated {len(batches)} dynamic batches for high-effort processing:\n")
@@ -191,11 +210,20 @@ Strict Rules:
             
         content.append({"type": "text", "text": prompt})
         
+        system_payload = []
+        if skill_text:
+            system_payload.append({
+                "type": "text",
+                "text": skill_text,
+                "cache_control": {"type": "ephemeral"}
+            })
+            
         payload = {
             "model": "claude-haiku-5-5",
             "max_tokens": 64000,
             "thinking": {"type": "adaptive"},
             "output_config": {"effort": "high"},
+            "system": system_payload,
             "messages": [{"role": "user", "content": content}]
         }
         
