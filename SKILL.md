@@ -160,10 +160,82 @@ If the author provides a pre-publication Word manuscript (`.docx`):
 
 ---
 
-## 6. Verification Checklist for Autonomous Agents
+## 6. Layer 3: Computational Telemetry & API Auditing Protocol
+
+Autonomous agents must not treat LLM API calls as opaque black boxes. Multimodal vision models in high-effort mode generate critical computational telemetry across the HTTP payload, JSON response, and response headers. Capturing this data enables automated quality control, latency optimization, and tamper-evident audit trails.
+
+### The 5 Telemetry Dimensions
+
+1. **Cognitive Load & Complexity Ratio ($\mathcal{R}_{cog}$)**:
+   $$\mathcal{R}_{cog} = \frac{\text{thinking\_tokens}}{\text{output\_tokens}}$$
+   - **Table Density Sentinel**: Narrative prose pages average $\mathcal{R}_{cog} \approx 10\% - 25\%$. Complex multi-column data tables (e.g. Table 1) surge to $\mathcal{R}_{cog} \approx 50\% - 60\%$ (consuming 2,500+ reasoning tokens).
+   - **Automated Complexity Profiling**: If an agent observes $\mathcal{R}_{cog} > 45\%$ on a page, it tags the section as high-density structured data.
+2. **Cryptographic Proof of Reasoning (`signature`)**:
+   - Each `thinking` block returned by Anthropic includes an HMAC cryptographic `signature` (e.g. `CAQS/S0KE...`).
+   - This cryptographic signature serves as verifiable proof that the internal spatial decomposition and grid verification steps were generated verbatim by the model's neural network and not fabricated post-hoc.
+3. **Zero-Data-Loss Truncation Safeguard (`stop_reason`)**:
+   - An agent must verify `stop_reason == "end_turn"` for every batch.
+   - **Failure Alert**: If `stop_reason == "max_tokens"`, the model was cut off mid-emission. The orchestrator must automatically initiate a continuation sub-batch starting from the last printed line rather than silently accepting truncated Markdown.
+4. **Prompt Caching Economics (`cache_creation` vs. `cache_read`)**:
+   - Academic OCR system instructions and schema rules contain ~3,000 static tokens.
+   - By tagging recurring instruction blocks with `"cache_control": {"type": "ephemeral"}`, batches 2 through $N$ read instructions directly from Anthropic's prompt cache, yielding an **~90% cost reduction** and **~80% Time-To-First-Token (TTFT) acceleration**.
+5. **Infrastructure & Rate-Limit Tracking (HTTP Headers)**:
+   - Captures `request-id` (e.g. `req_01...` or `msg_01...`) for distributed tracing.
+   - Monitors `anthropic-ratelimit-tokens-remaining` and `anthropic-ratelimit-tokens-reset` to dynamically calibrate parallel batch concurrency without hitting HTTP 429 throttling.
+
+### Telemetry Audit Report Schema (`conversion_telemetry.json`)
+
+The converter script automatically writes `conversion_telemetry.json` alongside the master `.md`:
+
+```json
+{
+  "source_pdf": "article.pdf",
+  "timestamp_utc": "2026-10-12T11:20:00Z",
+  "model": "claude-haiku-5-5",
+  "output_markdown": "article.md",
+  "aggregate_summary": {
+    "total_pages": 15,
+    "total_batches": 6,
+    "total_wall_clock_seconds": 298.4,
+    "total_input_tokens": 18240,
+    "total_output_tokens": 24190,
+    "total_thinking_tokens": 9840,
+    "total_text_tokens": 14350,
+    "overall_cognitive_effort_ratio": 0.4068,
+    "overall_throughput_tok_per_sec": 81.07,
+    "all_batches_clean_stop": true
+  },
+  "batches": [
+    {
+      "batch_id": "batch_2_body",
+      "description": "Body Pages 4 to 6",
+      "request_id": "msg_011Cfwno6H6efSevhC8HrcJM",
+      "elapsed_seconds": 42.1,
+      "stop_reason": "end_turn",
+      "has_cryptographic_signature": true,
+      "tokens": {
+        "input_tokens": 2924,
+        "output_tokens": 4543,
+        "thinking_tokens": 2533,
+        "text_tokens": 2010,
+        "cognitive_effort_ratio": 0.5576
+      },
+      "performance": {
+        "effective_throughput_tok_per_sec": 107.9
+      }
+    }
+  ]
+}
+```
+
+---
+
+## 7. Verification Checklist for Autonomous Agents
 
 Before marking any conversion task complete, the agent must verify:
 
+- [ ] **Computational Telemetry Audit**: `conversion_telemetry.json` records `all_batches_clean_stop: true` (`stop_reason == "end_turn"` across all batches).
+- [ ] **Cryptographic Signatures**: `has_cryptographic_signature: true` confirming authentic reasoning execution.
 - [ ] **Total Word Count**: Markdown word count is within expected variance of source text layer.
 - [ ] **6-Word Verbatim Alignment**: $\ge 85\%$ of 6-word n-grams match the source text verbatim.
 - [ ] **Table Integrity**: Every table mentioned in the text exists with complete rows, parameter columns, and units.

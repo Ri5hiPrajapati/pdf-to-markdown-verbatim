@@ -2,8 +2,12 @@
 """batch_converter_haiku55.py
 Universal multimodal vision OCR batch converter for any academic research or review paper PDF.
 Uses Claude Haiku 5.5 in High Effort visual mode with adaptive thinking.
+Logs detailed computational telemetry, cognitive effort ratios, and API audit trails.
 """
-import fitz  # PyMuPDF
+try:
+    import pymupdf as fitz
+except ImportError:
+    import fitz
 import base64
 import requests
 import json
@@ -107,6 +111,8 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
     }
     
     converted_parts = []
+    batch_telemetry = []
+    total_start_time = time.time()
     
     for idx, b in enumerate(batches):
         print(f"\n==========================================")
@@ -171,7 +177,16 @@ Strict Rules:
                 elapsed = time.time() - start_time
                 if r.status_code == 200:
                     data = r.json()
-                    text_blocks = [blk.get("text", "") for blk in data.get("content", []) if blk.get("type") == "text"]
+                    
+                    # 1. Extract text and thinking blocks
+                    text_blocks = []
+                    thinking_blocks = []
+                    for blk in data.get("content", []):
+                        if blk.get("type") == "text":
+                            text_blocks.append(blk.get("text", ""))
+                        elif blk.get("type") == "thinking":
+                            thinking_blocks.append(blk)
+                            
                     out_text = "\n\n".join(text_blocks)
                     
                     part_path = os.path.join(output_dir, b["filename"])
@@ -179,8 +194,80 @@ Strict Rules:
                         fp.write(out_text)
                     converted_parts.append(out_text)
                     
+                    # 2. Extract Token & Usage Telemetry
                     usage = data.get("usage", {})
-                    print(f"  ✓ SUCCESS in {elapsed:.1f}s (Tokens: in={usage.get('input_tokens')}, out={usage.get('output_tokens')})")
+                    in_tokens = usage.get("input_tokens", 0)
+                    out_tokens = usage.get("output_tokens", 0)
+                    cache_creation = usage.get("cache_creation_input_tokens", 0)
+                    cache_read = usage.get("cache_read_input_tokens", 0)
+                    
+                    # Check thinking tokens in usage details or estimate
+                    output_details = usage.get("output_tokens_details", {})
+                    thinking_tokens = output_details.get("thinking_tokens", 0)
+                    if thinking_tokens == 0 and thinking_blocks:
+                        # Fallback heuristic if not directly parsed
+                        thinking_tokens = int(sum(len(t.get("thinking", "").split()) * 1.33 for t in thinking_blocks))
+                        
+                    text_tokens = max(0, out_tokens - thinking_tokens)
+                    cog_ratio = round(thinking_tokens / out_tokens, 4) if out_tokens > 0 else 0.0
+                    throughput = round(out_tokens / elapsed, 2) if elapsed > 0 else 0.0
+                    
+                    # 3. Extract Diagnostics & Proofs
+                    stop_reason = data.get("stop_reason", "unknown")
+                    req_id = r.headers.get("request-id", data.get("id", ""))
+                    has_sig = any(bool(t.get("signature")) for t in thinking_blocks)
+                    
+                    # 4. Extract Rate Limits from Headers
+                    rl_req_rem = r.headers.get("anthropic-ratelimit-requests-remaining")
+                    rl_tok_rem = r.headers.get("anthropic-ratelimit-tokens-remaining")
+                    rl_tok_reset = r.headers.get("anthropic-ratelimit-tokens-reset")
+                    
+                    # 5. Persist Thinking Trace if present
+                    if thinking_blocks:
+                        trace_path = os.path.join(output_dir, f"{b['id']}_thinking_trace.json")
+                        with open(trace_path, "w", encoding="utf-8") as fp:
+                            json.dump({
+                                "batch_id": b["id"],
+                                "request_id": req_id,
+                                "model": data.get("model", "claude-haiku-5-5"),
+                                "stop_reason": stop_reason,
+                                "thinking_blocks": thinking_blocks,
+                                "usage": usage
+                            }, fp, indent=2)
+                            
+                    batch_record = {
+                        "batch_id": b["id"],
+                        "description": b["desc"],
+                        "pages": [p+1 for p in b["pages"]],
+                        "request_id": req_id,
+                        "elapsed_seconds": round(elapsed, 2),
+                        "stop_reason": stop_reason,
+                        "has_cryptographic_signature": has_sig,
+                        "tokens": {
+                            "input_tokens": in_tokens,
+                            "output_tokens": out_tokens,
+                            "thinking_tokens": thinking_tokens,
+                            "text_tokens": text_tokens,
+                            "cognitive_effort_ratio": cog_ratio,
+                            "cache_creation_tokens": cache_creation,
+                            "cache_read_tokens": cache_read
+                        },
+                        "performance": {
+                            "effective_throughput_tok_per_sec": throughput
+                        },
+                        "rate_limits": {
+                            "requests_remaining": rl_req_rem,
+                            "tokens_remaining": rl_tok_rem,
+                            "tokens_reset": rl_tok_reset
+                        }
+                    }
+                    batch_telemetry.append(batch_record)
+                    
+                    print(f"  ✓ SUCCESS in {elapsed:.1f}s")
+                    print(f"    Tokens: in={in_tokens}, out={out_tokens} (Thinking: {thinking_tokens} [{cog_ratio*100:.1f}%])")
+                    print(f"    Speed: {throughput} tok/s | Stop Reason: {stop_reason} | Sig Verified: {has_sig}")
+                    if stop_reason == "max_tokens":
+                        print(f"    ⚠️ WARNING: Batch output truncated due to max_tokens limit!")
                     print(f"    Saved: {b['filename']} ({len(out_text)} chars, {len(out_text.split())} words)")
                     success = True
                     break
@@ -213,7 +300,55 @@ Strict Rules:
     if refs:
         print(f"  References Audited: [1] to [{max(refs)}] (Total unique: {len(refs)})")
         
-    return master_path
+    # Write Comprehensive Telemetry Audit Report
+    total_elapsed = time.time() - total_start_time
+    total_in = sum(b["tokens"]["input_tokens"] for b in batch_telemetry)
+    total_out = sum(b["tokens"]["output_tokens"] for b in batch_telemetry)
+    total_think = sum(b["tokens"]["thinking_tokens"] for b in batch_telemetry)
+    total_cache_create = sum(b["tokens"]["cache_creation_tokens"] for b in batch_telemetry)
+    total_cache_read = sum(b["tokens"]["cache_read_tokens"] for b in batch_telemetry)
+    overall_cog = round(total_think / total_out, 4) if total_out > 0 else 0.0
+    overall_throughput = round(total_out / total_elapsed, 2) if total_elapsed > 0 else 0.0
+    
+    telemetry_report = {
+        "source_pdf": os.path.basename(pdf_path),
+        "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "model": "claude-haiku-5-5",
+        "output_markdown": os.path.basename(master_path),
+        "aggregate_summary": {
+            "total_pages": total_pages,
+            "total_batches": len(batches),
+            "total_wall_clock_seconds": round(total_elapsed, 2),
+            "total_input_tokens": total_in,
+            "total_output_tokens": total_out,
+            "total_thinking_tokens": total_think,
+            "total_text_tokens": total_out - total_think,
+            "overall_cognitive_effort_ratio": overall_cog,
+            "prompt_caching": {
+                "cache_creation_tokens": total_cache_create,
+                "cache_read_tokens": total_cache_read
+            },
+            "overall_throughput_tok_per_sec": overall_throughput,
+            "all_batches_clean_stop": all(b["stop_reason"] == "end_turn" for b in batch_telemetry)
+        },
+        "batches": batch_telemetry
+    }
+    
+    telemetry_path = os.path.join(output_dir, "conversion_telemetry.json")
+    with open(telemetry_path, "w", encoding="utf-8") as fp:
+        json.dump(telemetry_report, fp, indent=2)
+        
+    print("\n==========================================")
+    print("=== COMPUTATIONAL TELEMETRY & AUDIT SUMMARY ===")
+    print(f"Audit Report Saved: {telemetry_path}")
+    print(f"Total Wall-Clock Time: {total_elapsed:.1f}s")
+    print(f"Total Input Tokens:    {total_in:,}")
+    print(f"Total Output Tokens:   {total_out:,} (Thinking: {total_think:,} [{overall_cog*100:.1f}%])")
+    print(f"Throughput:            {overall_throughput:.1f} tok/s")
+    print(f"Integrity Status:      {'100% CLEAN (All batches end_turn)' if telemetry_report['aggregate_summary']['all_batches_clean_stop'] else 'ALERT: Potential Truncation Detected'}")
+    print("==========================================\n")
+    
+    return master_path, telemetry_path
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

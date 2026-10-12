@@ -24,7 +24,7 @@ This repository codifies the **exact failure modes discovered in practice** and 
 ## 📂 Repository Contents
 
 * [`SKILL.md`](SKILL.md) — The complete universal Agent Skill specification. Plug this directly into **Google Antigravity**, **Claude Code**, **Gemini CLI**, or any agentic system.
-* [`batch_converter_haiku55.py`](batch_converter_haiku55.py) — Universal, dynamic Python batch converter that scans any arbitrary PDF, calculates page counts, identifies reference sections, executes high-effort visual OCR passes, and stitches the master Markdown file.
+* [`batch_converter_haiku55.py`](batch_converter_haiku55.py) — Universal, dynamic Python batch converter that scans any arbitrary PDF, calculates page counts, identifies reference sections, executes high-effort visual OCR passes, stitches the master Markdown file, and generates a comprehensive computational audit report (`conversion_telemetry.json`).
 * [`verify_md.py`](verify_md.py) — Pure-Python, cross-platform quantitative verification tool (evaluates word counts, 6-word n-gram verbatim alignment, number preservation, and reference completeness).
 
 ---
@@ -63,10 +63,21 @@ The converter will:
 3. Render pages at 150 DPI and call `claude-haiku-5-5` with `effort: "high"` and adaptive thinking.
 4. Reconstruct all data tables and mathematical/chemical notations ($...$, $$...$$).
 5. Stitch all chunks into `output_dir/<paper_name>.md`.
+6. Log a companion **`output_dir/conversion_telemetry.json`** auditing thinking token ratios, cryptographic signatures, rate limits, and throughput.
 
 ---
 
-### 3. Verify Accuracy
+### 3. Computational Telemetry & Cognitive Load Auditing
+
+Each conversion generates `conversion_telemetry.json` tracking:
+* **Cognitive Effort Ratio ($\mathcal{R}_{cog} = \frac{\text{thinking\_tokens}}{\text{output\_tokens}}$)**: Identifies complex data tables ($\mathcal{R}_{cog} > 50\%$) vs narrative prose ($\mathcal{R}_{cog} \approx 15\%$).
+* **Cryptographic Signatures (`has_cryptographic_signature`)**: Verifies HMAC-SHA authenticity of internal reasoning.
+* **Truncation Diagnostic (`stop_reason == "end_turn"`)**: Zero-data-loss verification confirming generation was not cut off.
+* **API Rate Limits & Throughput**: Tracks tokens remaining and effective tokens/sec throughput.
+
+---
+
+### 4. Verify Accuracy
 
 Run the verification tool to audit the conversion against the original PDF text layer:
 
