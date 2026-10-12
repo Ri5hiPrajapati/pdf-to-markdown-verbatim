@@ -3,7 +3,10 @@
 Quantitative, cross-platform fidelity checker for PDF-to-Markdown conversions.
 No external system binaries required.
 """
-import fitz
+try:
+    import pymupdf as fitz
+except ImportError:
+    import fitz
 import re
 import sys
 import unicodedata
