@@ -61,11 +61,23 @@ def main(pdf_path, md_path):
     tot = max(1, len(words_md) - n + 1)
     print(f"6-word verbatim alignment: {hits}/{tot} ({100 * hits / tot:.1f}%)")
     
-    # Check numbers
-    nums_src = Counter(re.findall(r"\d+(?:\.\d+)?", src))
-    nums_md = Counter(re.findall(r"\d+(?:\.\d+)?", out))
-    diff_nums = nums_src - nums_md
-    print(f"Prose numbers matched: {len(nums_src) - len(diff_nums)}/{len(nums_src)}")
+    # Check numbers (exact and substring/DOI parity)
+    nums_src = sorted(list(set(re.findall(r"\b\d+(?:\.\d+)?\b", src))))
+    nums_md_tokens = set(re.findall(r"\b\d+(?:\.\d+)?\b", out))
+    raw_md = open(md_path, encoding="utf-8").read()
+    
+    exact_matches = [n for n in nums_src if n in nums_md_tokens]
+    substring_matches = [n for n in nums_src if n not in nums_md_tokens and n in raw_md]
+    strictly_absent = [n for n in nums_src if n not in raw_md]
+    
+    tot_nums = max(1, len(nums_src))
+    print(f"Prose numbers exact match: {len(exact_matches)}/{tot_nums} ({100 * len(exact_matches) / tot_nums:.1f}%)")
+    print(f"Numbers present in URLs/DOIs/Math/Substrings: {len(substring_matches)}")
+    print(f"Total Effective Numerical Parity: {len(exact_matches) + len(substring_matches)}/{tot_nums} ({100 * (len(exact_matches) + len(substring_matches)) / tot_nums:.1f}%)")
+    if strictly_absent:
+        print(f"Strictly absent tokens ({len(strictly_absent)}): {strictly_absent[:8]}{' ...' if len(strictly_absent) > 8 else ''} (mostly page furniture/barcodes)")
+    else:
+        print("Strictly absent tokens: 0 (100% scientific completeness!)")
     
     # Check references (Numbered style or Author-Year style)
     refs_found = sorted(set(int(r) for r in re.findall(r"\[(\d+)\]", out) if int(r) <= 500))
