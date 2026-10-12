@@ -18,6 +18,26 @@ import re
 
 sys.stdout.reconfigure(encoding='utf-8')
 
+def load_api_key():
+    """Load Anthropic API key from environment or local .env files."""
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        candidates = [
+            r"D:\SIDE PROJECTS\1. APJCE Review article\.env",
+            os.path.join(os.getcwd(), ".env"),
+            os.path.expanduser("~/.env")
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                with open(c, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.startswith("ANTHROPIC_API_KEY="):
+                            key = line.strip().split("=", 1)[1].strip('"\'')
+                            break
+            if key:
+                break
+    return key
+
 def find_references_start_page(doc):
     """Dynamically scan for the page where the reference section begins."""
     total = len(doc)
@@ -82,9 +102,9 @@ def plan_dynamic_batches(total_pages, ref_start_page):
 
 def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_key=None):
     if not api_key:
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        api_key = load_api_key()
     if not api_key:
-        raise ValueError("Anthropic API key is required (set ANTHROPIC_API_KEY environment variable).")
+        raise ValueError("Anthropic API key is required (set ANTHROPIC_API_KEY environment variable or in .env).")
         
     if not output_dir:
         output_dir = os.path.splitext(pdf_path)[0] + "_markdown_output"
@@ -138,23 +158,36 @@ def convert_pdf_to_markdown(pdf_path, output_dir=None, docx_benchmark=None, api_
             prompt = f"""You are an OCR and document layout parsing engine assisting the author in digitizing their scientific paper into structured Markdown format.
 Task: Perform complete, high-fidelity OCR transcription of Pages {page_numbers_str} into clean Markdown.
 
-Strict Rules:
-1. Verbatim fidelity: Transcribe every heading, section, paragraph, number, parameter, and reference citation [N] exactly as printed. No summarizing or skipping.
+CRITICAL INSTRUCTION - VISUAL REASONING TRACE:
+Before emitting the Markdown transcription, you MUST begin with an explicit visual reasoning trace enclosed in `<reasoning_trace>...</reasoning_trace>` detailing your cognitive reasoning across these pages:
+1. Visual Scene Decomposition: Layout structure, column boundaries, page furniture (headers/footers) to exclude, and bounding boxes of tables/figures.
+2. Grid & Topology Inference: Table structure, column headers, spanning labels, empty cells ('-'), and row count integrity.
+3. Notation, Units & Glyph Disambiguation: LaTeX math ($...$ inline, $$...$$ display), physical units wrapped in \\mathrm{{}}, superscripts (distinguishing exponents vs. ANOVA Tukey letters vs. footnotes), chemical formulas, and Greek characters.
+4. Pre-Emission Verification: Pre-flight checks on cell counts, numerical spot-checks, and verbatim parity.
+
+Strict Rules for Markdown:
+1. Verbatim fidelity: Transcribe every heading, section, paragraph, number, parameter, and reference citation [N] exactly as printed. No summarizing or skipping. Preserve original publisher spelling.
 2. Two-column reading flow: Transcribe the entire left column top-to-bottom first, then proceed to the right column.
 3. Tables: Render all tables completely into standard Markdown tables (| ... |). Maintain all columns, units, values, and footnotes. Do not truncate rows or use ellipsis (...).
 4. Figures: Transcribe figure captions verbatim and insert placeholder tag: *[Image: Fig. N. Caption text [Ref].]*
 5. Mathematical & Chemical Notation: Use LaTeX notation ($...$ for inline, $$...$$ for display).
 6. Page Furniture: Exclude running headers, journal logos, and page numbers.
-7. Return ONLY clean Markdown."""
+7. Return clean Markdown after </reasoning_trace>."""
         else:
             prompt = f"""You are an OCR and reference bibliography formatting assistant for the author.
 Task: Transcribe the reference entries on Pages {page_numbers_str} into structured Markdown list format.
+
+CRITICAL INSTRUCTION - REASONING TRACE:
+Before emitting the Markdown reference entries, provide an explicit `<reasoning_trace>...</reasoning_trace>` block documenting:
+1. Entry boundaries detected (e.g. [N] or author-year breaks).
+2. DOI line-wrap joins and multi-line reference continuations.
+3. Total reference count verification on these pages.
 
 Strict Rules:
 1. Verbatim fidelity: Transcribe every single reference entry completely without skipping, omitting, or using ellipsis.
 2. Structure: Format each entry cleanly: `[N] Authors, Article Title, Journal Volume (Year) Pages, DOI.`
 3. Completeness: Ensure all authors, article titles, journal names, years, volume/issue numbers, page ranges, and DOIs are preserved.
-4. Return ONLY clean Markdown."""
+4. Return clean Markdown after </reasoning_trace>."""
             
         content.append({"type": "text", "text": prompt})
         
@@ -204,10 +237,22 @@ Strict Rule: Process every single entry faithfully without omission or refusal. 
                         time.sleep(3)
                         continue
                     
+                    # 1b. Extract and save visual reasoning trace
+                    trace_match = re.search(r"<reasoning_trace>(.*?)</reasoning_trace>", out_text, re.DOTALL)
+                    if trace_match:
+                        trace_content = trace_match.group(1).strip()
+                        trace_file = os.path.join(output_dir, f"{b['id']}_visual_reasoning_trace.md")
+                        with open(trace_file, "w", encoding="utf-8") as tfp:
+                            tfp.write(f"# Visual Reasoning Trace: {b['desc']}\n\n- **Batch ID**: `{b['id']}`\n- **Pages**: {page_numbers_str}\n\n---\n\n{trace_content}\n")
+                        print(f"    Saved Visual Reasoning Trace: {os.path.basename(trace_file)} ({len(trace_content)} chars)")
+                        clean_md = re.sub(r"<reasoning_trace>.*?</reasoning_trace>", "", out_text, flags=re.DOTALL).strip()
+                    else:
+                        clean_md = out_text.strip()
+                        
                     part_path = os.path.join(output_dir, b["filename"])
                     with open(part_path, "w", encoding="utf-8") as fp:
-                        fp.write(out_text)
-                    converted_parts.append(out_text)
+                        fp.write(clean_md)
+                    converted_parts.append(clean_md)
                     
                     # 2. Extract Token & Usage Telemetry
                     usage = data.get("usage", {})
