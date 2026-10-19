@@ -1,89 +1,51 @@
-# Self-Hosting NVIDIA Nemotron Parse on Google Colab (Free Tier)
+# Self-Hosting Open-Source OCR Models on Google Colab (Free Tier)
+### Turnkey Jupyter Notebooks for `zai-org/GLM-OCR` and `baidu/Unlimited-OCR`
 
-This guide shows how to run **NVIDIA Nemotron Parse** on Google Colab's **free Tesla T4 GPU (15–16 GB VRAM)** with zero API subscription costs.
-
----
-
-## 1. Why Nemotron Parse Fits on Colab Free Tier
-
-| Model Metric | Value |
-| :--- | :--- |
-| **Model Size** | **~885M – ~903M parameters** (<1B parameters) |
-| **Architecture** | Vision-Encoder-Decoder (C-RADIO vision backbone + mBART decoder) |
-| **VRAM at FP16 Precision** | **~2.0 GB** |
-| **Colab Free Tier GPU** | **Tesla T4 (15.3 GB VRAM)** |
-| **Available Headroom** | **>13 GB free VRAM** (Zero Out-Of-Memory risk) |
+This directory provides ready-to-run Jupyter Notebooks configured for Google Colab's **free Tesla T4 GPU (15.3 GB VRAM)**. You can run end-to-end scientific PDF parsing, evaluate benchmarks, and even expose Colab as a private REST API endpoint for local Antigravity sessions.
 
 ---
 
-## 2. Quickstart Code for Google Colab
+## 🚀 Available One-Click Colab Notebooks
 
-Create a new notebook in [Google Colab](https://colab.research.google.com), set Runtime to **T4 GPU** (`Runtime > Change runtime type > T4 GPU`), and run:
+| Notebook | Target Model | Architecture & VRAM Footprint | One-Click Colab Launch |
+| :--- | :--- | :--- | :--- |
+| **`glm_ocr_benchmark.ipynb`** | **`zai-org/GLM-OCR`** *(Zhipu AI)* | CogViT (~0.4B) + GLM-0.5B = **~0.9B parameters** (~2.5 GB VRAM in BF16) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/glm_ocr_benchmark.ipynb) |
+| **`unlimited_ocr_benchmark.ipynb`** | **`baidu/Unlimited-OCR`** *(Baidu)* | Reference Sliding Window Attention (R-SWA) + DeepSeek-OCR vision backbone | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/unlimited_ocr_benchmark.ipynb) |
+| **`colab_api_server.ipynb`** | **Live Remote API Server** | FastAPI + Localtunnel exposing a `/parse` endpoint to Antigravity & local terminals | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/colab_api_server.ipynb) |
 
-```python
-# Step 1: Install Dependencies
-!pip install -q transformers torch torchvision pymupdf pillow accelerate
+---
 
-# Step 2: Load Nemotron Parse Model & Processor
-import torch
-from transformers import AutoModelForVision2Seq, AutoProcessor
-import fitz # PyMuPDF
-from PIL import Image
-import io
+## 1. Why These Models Fit on Google Colab Free Tier
 
-model_id = "nvidia/NVIDIA-Nemotron-Parse-2.0" # or "nvidia/Nemotron-3.5-Parse"
+1. **`zai-org/GLM-OCR` (~0.9B parameters)**:
+   * **VRAM**: Consumes only **~2.5 GB of VRAM** in `bfloat16` or `float16`.
+   * **Hardware Margin**: Colab's free T4 GPU provides 15.3 GB, leaving **>12.5 GB of free headroom**. You will never hit Out-Of-Memory (OOM) errors even on 300 DPI high-resolution figures.
+   * **Domain Strength**: Specifically trained on scientific papers, dense LaTeX mathematical symbols, multi-column reading order, and table boundaries.
+2. **`baidu/Unlimited-OCR`**:
+   * **VRAM**: Introduces **Reference Sliding Window Attention (R-SWA)** to decouple KV-cache growth from output token length.
+   * **Long-Horizon Support**: Unlike conventional multimodal LLMs whose memory usage balloons on long documents, Unlimited-OCR maintains a flat memory profile across 10+ page chapters.
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Loading {model_id} on {device}...")
+---
 
-processor = AutoProcessor.from_pretrained(model_id, trust_remote_code=True)
-model = AutoModelForVision2Seq.from_pretrained(
-    model_id,
-    torch_dtype=torch.float16,
-    trust_remote_code=True
-).to(device)
+## 2. Bridging Google Colab with Antigravity / Local PC
 
-print("Model loaded successfully into VRAM! Memory footprint: ~2 GB.")
+If you want Antigravity or your local terminal to send PDFs to your free Google Colab GPU and receive Markdown back directly:
 
-# Step 3: Define PDF Page Parsing Function
-def parse_pdf_page(pdf_path, page_num=0):
-    doc = fitz.open(pdf_path)
-    page = doc.load_page(page_num)
-    pix = page.get_pixmap(dpi=150)
-    image = Image.open(io.BytesIO(pix.tobytes("png")))
-    
-    prompt = "Extract all text, sections, headings, mathematical symbols, and tables from this document page verbatim."
-    inputs = processor(images=image, text=prompt, return_tensors="pt").to(device, torch.float16)
-    
-    with torch.no_grad():
-        generated_ids = model.generate(**inputs, max_new_tokens=4096)
-        
-    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-    return generated_text
+### Step 1: Start the Colab Server
+1. Click the badge to open [`colab_api_server.ipynb`](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/colab_api_server.ipynb).
+2. Go to `Runtime > Change runtime type` and select **T4 GPU**.
+3. Run all cells (`Ctrl+F9`).
+4. In the final cell output, look for the public URL generated by Localtunnel (e.g., `https://clever-wolves-learn.loca.lt`).
 
-# Step 4: Upload and Parse your PDF
-from google.colab import files
-uploaded = files.upload()
+### Step 2: Send PDFs from Antigravity / Local Terminal
+From your local project terminal, run [`colab_remote_converter.py`](../converters/colab_remote_converter.py):
 
-for filename in uploaded.keys():
-    print(f"Parsing {filename}...")
-    doc = fitz.open(filename)
-    full_markdown = []
-    for i in range(len(doc)):
-        print(f"Page {i+1}/{len(doc)}")
-        page_md = parse_pdf_page(filename, i)
-        full_markdown.append(page_md)
-        
-    out_name = filename.replace(".pdf", "_converted.md")
-    with open(out_name, "w", encoding="utf-8") as f:
-        f.write("\n\n---\n\n".join(full_markdown))
-    print(f"Saved to {out_name}")
-    files.download(out_name)
+```bash
+python converters/colab_remote_converter.py path/to/paper.pdf --url https://clever-wolves-learn.loca.lt
 ```
 
----
-
-## 3. Benefits of Self-Hosting
-1. **Zero API Cost**: 100% free; does not consume developer cloud API credits.
-2. **Infinite Requests**: Process hundreds of pages without running into 40 RPM or 1,000 credit caps.
-3. **Complete Privacy**: Document data never leaves your private Colab runtime.
+This will:
+1. Stream the PDF over the tunnel to your Google Colab T4 GPU.
+2. Run high-speed GPU inference using `GLM-OCR`.
+3. Return the clean, verbatim Markdown back to your local folder.
+4. Auto-run `verify_md.py` for immediate quantitative scoring!

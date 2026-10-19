@@ -109,14 +109,27 @@ flowchart TD
 
 ---
 
-## 💻 Google Colab: Free Self-Hosting for Nemotron Parse
+## 💻 Google Colab: Free Self-Hosting & Antigravity Bridge
+### Host SOTA Open-Source Models on Free Tesla T4 GPU (~2 GB VRAM)
 
-If your 1,000 free cloud credits on NVIDIA NIM run out, you can run Nemotron Parse **100% free on Google Colab**:
-* **Model Size**: ~885M–903M parameters (<1B parameters).
-* **VRAM**: Requires only **~2.0 GB of VRAM** in FP16.
-* **Colab Free Tier**: Offers a **Tesla T4 GPU with 15.3 GB VRAM**, leaving **>13 GB of VRAM headroom**.
+We provide turnkey, one-click Google Colab notebooks configured for Google Colab's **free Tesla T4 GPU (15.3 GB VRAM)**. This allows you to run open-weights state-of-the-art document parsers with **zero cloud subscription costs**:
 
-See [`colab/README.md`](colab/README.md) for the ready-to-run Colab script and Hugging Face weights loading guide.
+| Notebook | Model & Architecture | VRAM Footprint | One-Click Colab Launch |
+| :--- | :--- | :--- | :--- |
+| **`glm_ocr_benchmark.ipynb`** | **`zai-org/GLM-OCR`** *(Zhipu AI)*<br>CogViT (~0.4B) + GLM-0.5B = **~0.9B params** | **~2.5 GB** in BF16/FP16 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/glm_ocr_benchmark.ipynb) |
+| **`unlimited_ocr_benchmark.ipynb`** | **`baidu/Unlimited-OCR`** *(Baidu)*<br>Reference Sliding Window Attention (R-SWA) | **Flat KV Cache** (Long-Horizon) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/unlimited_ocr_benchmark.ipynb) |
+| **`colab_api_server.ipynb`** | **Remote Colab REST Server**<br>FastAPI + Localtunnel tunnel to Antigravity | Shared GPU | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/colab_api_server.ipynb) |
+
+### 🌉 Bridging Antigravity to Google Colab
+You can turn a free Colab session into a remote inference engine for your local Antigravity environment:
+1. Run [`colab_api_server.ipynb`](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/colab_api_server.ipynb) on Colab with T4 GPU.
+2. Copy the generated public URL (e.g. `https://clever-wolves-learn.loca.lt`).
+3. Stream local PDFs directly from Antigravity/local terminal:
+   ```bash
+   python converters/colab_remote_converter.py path/to/paper.pdf --url https://clever-wolves-learn.loca.lt
+   ```
+
+See [`colab/README.md`](colab/README.md) for full instructions and technical documentation.
 
 ---
 
@@ -128,9 +141,13 @@ pdf-to-markdown-verbatim/
 │   ├── nemotron_converter.py        # NVIDIA Nemotron Parse (LaTeX table stitching, 2D reading order)
 │   ├── gemini_converter.py          # Google Gemini 2.5 Flash / 3.5 Flash-Lite runner
 │   ├── llamaparse_converter.py      # LlamaIndex LlamaParse v2 Agentic runner (HTML->GFM table converter)
-│   └── claude_haiku_converter.py    # Claude 3.5 Haiku chunked vision converter
+│   ├── claude_haiku_converter.py    # Claude 3.5 Haiku chunked vision converter
+│   └── colab_remote_converter.py    # Local client bridging Antigravity to Colab GPU server
 ├── colab/
-│   └── README.md                    # Google Colab free Tesla T4 self-hosting guide
+│   ├── glm_ocr_benchmark.ipynb      # Zhipu AI GLM-OCR (~0.9B) Colab benchmark notebook
+│   ├── unlimited_ocr_benchmark.ipynb# Baidu Unlimited-OCR Colab benchmark notebook
+│   ├── colab_api_server.ipynb       # FastAPI + Localtunnel server on Colab GPU
+│   └── README.md                    # Colab deployment and Antigravity bridging guide
 ├── verify_md.py                     # Strict quantitative verification audit harness
 ├── BENCHMARKS.md                    # Detailed 80-page 5-paper master comparison ledger
 ├── requirements.txt                 # Dependencies
