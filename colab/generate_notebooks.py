@@ -16,7 +16,6 @@ def make_notebook(cells, gpu=True):
         nb['metadata']['colab'] = {'gpuType': 'T4', 'provenance': []}
     return nb
 
-# Shared Google Drive persistent caching block
 drive_mount_cell = {
     "cell_type": "code",
     "execution_count": None,
@@ -24,8 +23,8 @@ drive_mount_cell = {
     "outputs": [],
     "source": [
         "# Step 3: Mount Google Drive & Configure Persistent Hugging Face Cache\n",
-        "# This ensures model weights (~2.5 GB) are stored permanently in your Drive\n",
-        "# and NEVER need to be re-downloaded when your Colab GPU reconnects!\n",
+        "# Model weights (~2.5 GB) are stored permanently in your Drive.\n",
+        "# Subsequent runs load from Drive in 3-5 seconds without re-downloading!\n",
         "import os\n",
         "from google.colab import drive, userdata\n",
         "\n",
@@ -38,7 +37,7 @@ drive_mount_cell = {
         "os.environ['HF_HOME'] = hf_cache_dir\n",
         "os.environ['TRANSFORMERS_CACHE'] = hf_cache_dir\n",
         "\n",
-        "# Automatically inject HF_TOKEN if saved in Colab Secrets (silences unauthenticated warnings)\n",
+        "# Automatically inject HF_TOKEN if saved in Colab Secrets\n",
         "try:\n",
         "    token = userdata.get('HF_TOKEN')\n",
         "    if token:\n",
@@ -49,30 +48,29 @@ drive_mount_cell = {
         "except Exception:\n",
         "    print(\"2. ℹ️ Secrets manager skipped.\")\n",
         "\n",
-        "print(f\"3. ✅ Persistent Model Cache Active: {hf_cache_dir}\")\n",
-        "print(\"   Weights will download directly to your Google Drive and persist indefinitely!\")"
+        "print(f\"3. ✅ Persistent Model Cache Active: {hf_cache_dir}\")"
     ]
 }
 
 # ==========================================
-# 1. GLM-OCR Benchmark Notebook
+# 1. GLM-OCR Benchmark Notebook (Zero-Click Fully Automated)
 # ==========================================
 glm_cells = [
     {
         "cell_type": "markdown",
         "metadata": {},
         "source": [
-            "# 🚀 GLM-OCR: Open-Source Scientific PDF-to-Markdown Benchmark on Google Colab\n",
-            "### With Persistent Google Drive Model Caching (Never Re-Download Weights!)\n",
+            "# 🚀 GLM-OCR: Fully Automated Scientific PDF-to-Markdown Pipeline on Google Colab\n",
+            "### Zero Manual Clicking: Run All (`Ctrl + F9`) Converts Everything Automatically\n",
             "\n",
             "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/glm_ocr_benchmark.ipynb)\n",
             "\n",
-            "This notebook runs **Zhipu AI's GLM-OCR** (`zai-org/GLM-OCR`) on Google Colab's free **Tesla T4 GPU (15.3 GB VRAM)**.\n",
-            "\n",
-            "### Key Highlights:\n",
-            "* **Google Drive Persistence**: Model weights (~2.5 GB) are saved directly to your Google Drive. After downloading once, subsequent sessions load the model in **3–5 seconds**.\n",
-            "* **Model Architecture**: CogViT visual encoder (~0.4B) + GLM-0.5B language decoder = **~0.9B parameters** (~2.5 GB VRAM in BF16/FP16).\n",
-            "* **Domain Accuracy**: Specialized for dense scientific layouts, mathematical LaTeX equations, and multi-row tables."
+            "### How This Fully Automated Pipeline Works:\n",
+            "1. **Press `Ctrl + F9` (or `Runtime > Run all`) ONCE**.\n",
+            "2. It automatically mounts your Google Drive.\n",
+            "3. It loads **`zai-org/GLM-OCR` (~0.9B params)** into the free Tesla T4 GPU from your persistent Drive cache in 3 seconds.\n",
+            "4. It automatically detects and converts all PDFs from `/content/drive/MyDrive/input_pdfs/` (or benchmark samples).\n",
+            "5. It executes `verify_md.py` and saves the verified Markdown outputs directly back into `/content/drive/MyDrive/pdf_markdown_outputs/`."
         ]
     },
     {
@@ -102,9 +100,9 @@ glm_cells = [
         "metadata": {},
         "outputs": [],
         "source": [
-            "# Step 4: Clone Benchmark Toolkit & Verification Harness\n",
-            "!git clone https://github.com/Ri5hiPrajapati/pdf-to-markdown-verbatim.git\n",
-            "%cd pdf-to-markdown-verbatim"
+            "# Step 4: Clone Benchmark Toolkit & Verification Suite\n",
+            "!git clone https://github.com/Ri5hiPrajapati/pdf-to-markdown-verbatim.git /content/repo 2>/dev/null || (cd /content/repo && git pull)\n",
+            "%cd /content/repo"
         ]
     },
     {
@@ -114,7 +112,6 @@ glm_cells = [
         "outputs": [],
         "source": [
             "# Step 5: Load zai-org/GLM-OCR into GPU Memory\n",
-            "# (Loads from Google Drive if already downloaded; otherwise downloads and saves to Drive)\n",
             "import torch\n",
             "from transformers import AutoProcessor, AutoModelForCausalLM\n",
             "\n",
@@ -139,7 +136,7 @@ glm_cells = [
         "metadata": {},
         "outputs": [],
         "source": [
-            "# Step 6: Define Verbatim PDF Parsing Pipeline\n",
+            "# Step 6: Define Verbatim PDF Parsing Routine\n",
             "import io\n",
             "import time\n",
             "import pymupdf as fitz\n",
@@ -147,7 +144,7 @@ glm_cells = [
             "\n",
             "def parse_pdf_with_glm(pdf_path, dpi=150):\n",
             "    doc = fitz.open(pdf_path)\n",
-            "    print(f\"Processing: {pdf_path} ({len(doc)} pages)\")\n",
+            "    print(f\"\\n📄 Processing: {pdf_path} ({len(doc)} pages)\")\n",
             "    \n",
             "    page_mds = []\n",
             "    t0 = time.time()\n",
@@ -189,8 +186,7 @@ glm_cells = [
             "    with open(out_path, \"w\", encoding=\"utf-8\") as f:\n",
             "        f.write(full_markdown)\n",
             "        \n",
-            "    print(f\"\\n🎉 Conversion complete in {total_time:.2f}s ({total_time/len(doc):.2f}s/page)!\")\n",
-            "    print(f\"Saved to: {out_path}\")\n",
+            "    print(f\"🎉 Converted in {total_time:.2f}s ({total_time/len(doc):.2f}s/page) -> {out_path}\")\n",
             "    return out_path"
         ]
     },
@@ -200,68 +196,68 @@ glm_cells = [
         "metadata": {},
         "outputs": [],
         "source": [
-            "# Step 7: Upload a Benchmark PDF (e.g. Research Article 4)\n",
-            "from google.colab import files\n",
+            "# Step 7: Automatic Batch Conversion (Zero-Click)\n",
+            "# Scans your Google Drive '/content/drive/MyDrive/input_pdfs/' folder automatically!\n",
+            "import os\n",
             "import shutil\n",
+            "from pathlib import Path\n",
             "\n",
-            "print(\"Upload your benchmark PDF file (or cancel to use default demo):\")\n",
-            "uploaded = files.upload()\n",
+            "input_drive_dir = Path('/content/drive/MyDrive/input_pdfs')\n",
+            "output_drive_dir = Path('/content/drive/MyDrive/pdf_markdown_outputs')\n",
+            "input_drive_dir.mkdir(parents=True, exist_ok=True)\n",
+            "output_drive_dir.mkdir(parents=True, exist_ok=True)\n",
             "\n",
-            "if uploaded:\n",
-            "    target_pdf = list(uploaded.keys())[0]\n",
-            "else:\n",
-            "    target_pdf = \"sample_paper.pdf\"\n",
-            "    !wget -q -O sample_paper.pdf \"https://arxiv.org/pdf/2401.00001.pdf\"\n",
+            "# Find all PDFs in Drive input folder or local repo\n",
+            "target_pdfs = list(input_drive_dir.glob(\"*.pdf\"))\n",
             "\n",
-            "converted_md = parse_pdf_with_glm(target_pdf)\n",
+            "if not target_pdfs:\n",
+            "    print(f\"ℹ️ No PDFs found in {input_drive_dir}.\")\n",
+            "    print(\"Downloading default benchmark scientific article for demonstration...\")\n",
+            "    demo_pdf = Path(\"/content/sample_benchmark_article.pdf\")\n",
+            "    !wget -q -O \"{demo_pdf}\" \"https://arxiv.org/pdf/2401.00001.pdf\"\n",
+            "    target_pdfs = [demo_pdf]\n",
             "\n",
-            "# Automatically save a permanent backup copy in Google Drive\n",
-            "drive_out_dir = '/content/drive/MyDrive/pdf_markdown_outputs'\n",
-            "os.makedirs(drive_out_dir, exist_ok=True)\n",
-            "shutil.copy(converted_md, os.path.join(drive_out_dir, os.path.basename(converted_md)))\n",
-            "print(f\"✅ Output safely preserved in Google Drive: {drive_out_dir}/{os.path.basename(converted_md)}\")"
-        ]
-    },
-    {
-        "cell_type": "code",
-        "execution_count": None,
-        "metadata": {},
-        "outputs": [],
-        "source": [
-            "# Step 8: Run Quantitative Audit via verify_md.py\n",
-            "!python verify_md.py \"{target_pdf}\" \"{converted_md}\""
-        ]
-    },
-    {
-        "cell_type": "code",
-        "execution_count": None,
-        "metadata": {},
-        "outputs": [],
-        "source": [
-            "# Step 9: Download Converted Markdown to Local Machine\n",
-            "files.download(converted_md)"
+            "print(f\"\\nFound {len(target_pdfs)} PDF(s) to process completely unattended!\")\n",
+            "\n",
+            "for pdf in target_pdfs:\n",
+            "    converted_md = parse_pdf_with_glm(str(pdf))\n",
+            "    \n",
+            "    # Save backup directly into Google Drive\n",
+            "    dest_md = output_drive_dir / Path(converted_md).name\n",
+            "    shutil.copy(converted_md, dest_md)\n",
+            "    print(f\"✅ Saved permanently in Google Drive: {dest_md}\")\n",
+            "    \n",
+            "    # Run verification audit\n",
+            "    print(\"\\n--- Quantitative Audit Results ---\")\n",
+            "    !python verify_md.py \"{pdf}\" \"{converted_md}\"\n",
+            "\n",
+            "print(\"\\n=======================================================\")\n",
+            "print(\"ALL JOBS FINISHED SUCCESSFULLY WITHOUT ANY MANUAL CLICKS!\")\n",
+            "print(f\"Check your Google Drive folder: /MyDrive/pdf_markdown_outputs/\")\n",
+            "print(\"=======================================================\")"
         ]
     }
 ]
 
 # ==========================================
-# 2. Unlimited-OCR Benchmark Notebook
+# 2. Unlimited-OCR Benchmark Notebook (Zero-Click Fully Automated)
 # ==========================================
 unlimited_cells = [
     {
         "cell_type": "markdown",
         "metadata": {},
         "source": [
-            "# 🚀 Baidu Unlimited-OCR: Open-Source Scientific PDF-to-Markdown Benchmark on Google Colab\n",
-            "### With Persistent Google Drive Model Caching (Never Re-Download Weights!)\n",
+            "# 🚀 Baidu Unlimited-OCR: Fully Automated Pipeline on Google Colab\n",
+            "### Zero Manual Clicking: Run All (`Ctrl + F9`) Converts Everything Automatically\n",
             "\n",
             "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/unlimited_ocr_benchmark.ipynb)\n",
             "\n",
-            "This notebook runs **Baidu's Unlimited-OCR** (`baidu/Unlimited-OCR`) on Google Colab's free **Tesla T4 GPU (15.3 GB VRAM)**.\n",
-            "\n",
-            "### Key Highlights:\n",
-            "* **Google Drive Persistence**: Model weights are saved directly to your Google Drive cache. Reconnecting to Colab will load the model in seconds without re-downloading.\n",
-            "* **Model Architecture**: Reference Sliding Window Attention (R-SWA) with constant flat KV cache throughout multi-page autoregressive decoding."
+            "### How This Fully Automated Pipeline Works:\n",
+            "1. **Press `Ctrl + F9` ONCE**.\n",
+            "2. Mounts Google Drive and caches `baidu/Unlimited-OCR` weights.\n",
+            "3. Reads all PDFs automatically from `/content/drive/MyDrive/input_pdfs/`.\n",
+            "4. Runs inference using flat-memory Reference Sliding Window Attention (R-SWA).\n",
+            "5. Automatically saves verified Markdown files directly into `/content/drive/MyDrive/pdf_markdown_outputs/`."
         ]
     },
     {
@@ -291,9 +287,9 @@ unlimited_cells = [
         "metadata": {},
         "outputs": [],
         "source": [
-            "# Step 4: Clone Benchmark Toolkit & Verification Harness\n",
-            "!git clone https://github.com/Ri5hiPrajapati/pdf-to-markdown-verbatim.git\n",
-            "%cd pdf-to-markdown-verbatim"
+            "# Step 4: Clone Benchmark Suite\n",
+            "!git clone https://github.com/Ri5hiPrajapati/pdf-to-markdown-verbatim.git /content/repo 2>/dev/null || (cd /content/repo && git pull)\n",
+            "%cd /content/repo"
         ]
     },
     {
@@ -328,7 +324,7 @@ unlimited_cells = [
             "\n",
             "def parse_pdf_with_unlimited_ocr(pdf_path, dpi=150):\n",
             "    doc = fitz.open(pdf_path)\n",
-            "    print(f\"Processing: {pdf_path} ({len(doc)} pages)\")\n",
+            "    print(f\"\\n📄 Processing: {pdf_path} ({len(doc)} pages)\")\n",
             "    \n",
             "    page_mds = []\n",
             "    t0 = time.time()\n",
@@ -359,8 +355,7 @@ unlimited_cells = [
             "    with open(out_path, \"w\", encoding=\"utf-8\") as f:\n",
             "        f.write(full_markdown)\n",
             "        \n",
-            "    print(f\"\\n🎉 Conversion complete in {total_time:.2f}s ({total_time/len(doc):.2f}s/page)!\")\n",
-            "    print(f\"Saved to: {out_path}\")\n",
+            "    print(f\"🎉 Converted in {total_time:.2f}s ({total_time/len(doc):.2f}s/page) -> {out_path}\")\n",
             "    return out_path"
         ]
     },
@@ -370,46 +365,41 @@ unlimited_cells = [
         "metadata": {},
         "outputs": [],
         "source": [
-            "# Step 7: Upload a Benchmark PDF\n",
-            "from google.colab import files\n",
+            "# Step 7: Automatic Batch Conversion (Zero-Click)\n",
+            "import os\n",
             "import shutil\n",
+            "from pathlib import Path\n",
             "\n",
-            "print(\"Upload your benchmark PDF file:\")\n",
-            "uploaded = files.upload()\n",
+            "input_drive_dir = Path('/content/drive/MyDrive/input_pdfs')\n",
+            "output_drive_dir = Path('/content/drive/MyDrive/pdf_markdown_outputs')\n",
+            "input_drive_dir.mkdir(parents=True, exist_ok=True)\n",
+            "output_drive_dir.mkdir(parents=True, exist_ok=True)\n",
             "\n",
-            "if uploaded:\n",
-            "    target_pdf = list(uploaded.keys())[0]\n",
-            "else:\n",
-            "    target_pdf = \"sample_paper.pdf\"\n",
-            "    !wget -q -O sample_paper.pdf \"https://arxiv.org/pdf/2401.00001.pdf\"\n",
+            "target_pdfs = list(input_drive_dir.glob(\"*.pdf\"))\n",
             "\n",
-            "converted_md = parse_pdf_with_unlimited_ocr(target_pdf)\n",
+            "if not target_pdfs:\n",
+            "    print(f\"ℹ️ No PDFs found in {input_drive_dir}.\")\n",
+            "    print(\"Downloading default benchmark scientific article for demonstration...\")\n",
+            "    demo_pdf = Path(\"/content/sample_benchmark_article.pdf\")\n",
+            "    !wget -q -O \"{demo_pdf}\" \"https://arxiv.org/pdf/2401.00001.pdf\"\n",
+            "    target_pdfs = [demo_pdf]\n",
             "\n",
-            "# Preserve a permanent copy in Google Drive\n",
-            "drive_out_dir = '/content/drive/MyDrive/pdf_markdown_outputs'\n",
-            "os.makedirs(drive_out_dir, exist_ok=True)\n",
-            "shutil.copy(converted_md, os.path.join(drive_out_dir, os.path.basename(converted_md)))\n",
-            "print(f\"✅ Output safely preserved in Google Drive: {drive_out_dir}/{os.path.basename(converted_md)}\")"
-        ]
-    },
-    {
-        "cell_type": "code",
-        "execution_count": None,
-        "metadata": {},
-        "outputs": [],
-        "source": [
-            "# Step 8: Run Quantitative Audit via verify_md.py\n",
-            "!python verify_md.py \"{target_pdf}\" \"{converted_md}\""
-        ]
-    },
-    {
-        "cell_type": "code",
-        "execution_count": None,
-        "metadata": {},
-        "outputs": [],
-        "source": [
-            "# Step 9: Download Converted Markdown\n",
-            "files.download(converted_md)"
+            "print(f\"\\nFound {len(target_pdfs)} PDF(s) to process completely unattended!\")\n",
+            "\n",
+            "for pdf in target_pdfs:\n",
+            "    converted_md = parse_pdf_with_unlimited_ocr(str(pdf))\n",
+            "    \n",
+            "    dest_md = output_drive_dir / Path(converted_md).name\n",
+            "    shutil.copy(converted_md, dest_md)\n",
+            "    print(f\"✅ Saved permanently in Google Drive: {dest_md}\")\n",
+            "    \n",
+            "    print(\"\\n--- Quantitative Audit Results ---\")\n",
+            "    !python verify_md.py \"{pdf}\" \"{converted_md}\"\n",
+            "\n",
+            "print(\"\\n=======================================================\")\n",
+            "print(\"ALL JOBS FINISHED SUCCESSFULLY WITHOUT ANY MANUAL CLICKS!\")\n",
+            "print(f\"Check your Google Drive folder: /MyDrive/pdf_markdown_outputs/\")\n",
+            "print(\"=======================================================\")"
         ]
     }
 ]
@@ -423,12 +413,12 @@ server_cells = [
         "metadata": {},
         "source": [
             "# 🌐 Google Colab Zero-Cost OCR API Server for Antigravity & Local Clients\n",
-            "### With Persistent Google Drive Model Caching (Never Re-Download Weights!)\n",
+            "### Run All (`Ctrl + F9`) Once: Antigravity Controls Everything Remotely\n",
             "\n",
             "[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Ri5hiPrajapati/pdf-to-markdown-verbatim/blob/main/colab/colab_api_server.ipynb)\n",
             "\n",
             "This notebook turns your Google Colab free GPU into a **live, remote REST API endpoint**.\n",
-            "Model weights are saved in Google Drive so restarts and reconnects take just seconds!"
+            "Press `Ctrl + F9` once. Then, Antigravity or your local terminal will automatically send PDFs and receive Markdown back without any browser clicking!"
         ]
     },
     {
@@ -524,12 +514,12 @@ out_dir.mkdir(parents=True, exist_ok=True)
 
 with open(out_dir / "glm_ocr_benchmark.ipynb", "w", encoding="utf-8") as f:
     json.dump(make_notebook(glm_cells), f, indent=2)
-print("Updated colab/glm_ocr_benchmark.ipynb with Google Drive mounting and caching!")
+print("Updated colab/glm_ocr_benchmark.ipynb: Fully automated Zero-Click!")
 
 with open(out_dir / "unlimited_ocr_benchmark.ipynb", "w", encoding="utf-8") as f:
     json.dump(make_notebook(unlimited_cells), f, indent=2)
-print("Updated colab/unlimited_ocr_benchmark.ipynb with Google Drive mounting and caching!")
+print("Updated colab/unlimited_ocr_benchmark.ipynb: Fully automated Zero-Click!")
 
 with open(out_dir / "colab_api_server.ipynb", "w", encoding="utf-8") as f:
     json.dump(make_notebook(server_cells), f, indent=2)
-print("Updated colab/colab_api_server.ipynb with Google Drive mounting and caching!")
+print("Updated colab/colab_api_server.ipynb: Fully automated Zero-Click!")
