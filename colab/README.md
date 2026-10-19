@@ -27,7 +27,15 @@ This directory provides ready-to-run Jupyter Notebooks configured for Google Col
 
 ---
 
-## 2. Bridging Google Colab with Antigravity / Local PC
+## 2. Zero-Upload Execution & Persistent Drive Caching
+
+* **Zero-Upload Pre-Bundled Benchmarks**: All 5 benchmark scientific PDFs (`Research_Article_1_Soy_Protein.pdf`, `Research_Article_2_Sodium_Alginate.pdf`, `Research_Article_3_Betanin_DES.pdf`, `Research_Article_4_Antioxidant_Chitosan.pdf`, and `Review_Article_Natural_Food_Colorants.pdf`) are bundled directly inside the repository under `benchmark_pdfs/`. When running `Ctrl + F9` (Run all), the notebook automatically detects and converts all 5 papers with **zero file picker clicks or upload dialogs**.
+* **Persistent Model Caching**: Model weights (~2.5 GB) are saved permanently in `/content/drive/MyDrive/huggingface_cache`. After your first run, re-connecting to Colab loads weights in **3–5 seconds** without re-downloading.
+* **Custom PDF Batch Processing**: Drop any additional PDFs into your Google Drive folder `/MyDrive/input_pdfs/`, and the notebook will automatically convert and audit them alongside the benchmarks.
+
+---
+
+## 3. Bridging Google Colab with Antigravity / Local PC
 
 If you want Antigravity or your local terminal to send PDFs to your free Google Colab GPU and receive Markdown back directly:
 

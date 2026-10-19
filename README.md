@@ -148,6 +148,12 @@ pdf-to-markdown-verbatim/
 │   ├── unlimited_ocr_benchmark.ipynb# Baidu Unlimited-OCR Colab benchmark notebook
 │   ├── colab_api_server.ipynb       # FastAPI + Localtunnel server on Colab GPU
 │   └── README.md                    # Colab deployment and Antigravity bridging guide
+├── benchmark_pdfs/                  # Pre-bundled 5 benchmark scientific PDFs (zero-upload Colab runs)
+│   ├── Research_Article_1_Soy_Protein.pdf
+│   ├── Research_Article_2_Sodium_Alginate.pdf
+│   ├── Research_Article_3_Betanin_DES.pdf
+│   ├── Research_Article_4_Antioxidant_Chitosan.pdf
+│   └── Review_Article_Natural_Food_Colorants.pdf
 ├── verify_md.py                     # Strict quantitative verification audit harness
 ├── BENCHMARKS.md                    # Detailed 80-page 5-paper master comparison ledger
 ├── requirements.txt                 # Dependencies

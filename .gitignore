@@ -12,6 +12,7 @@ __pycache__/
 
 # Document formats & outputs
 *.pdf
+!benchmark_pdfs/*.pdf
 *.png
 *.jpg
 *.jpeg
